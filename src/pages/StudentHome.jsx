@@ -17,16 +17,15 @@ export default function StudentHome({ ctx }) {
     ;(async () => {
       try {
         // RLS returns only this student's own approved marks.
-        const [st, sub, mk, cd, r1, r2, ry] = await Promise.all([
+        const [st, sub, mk, r1, r2, ry] = await Promise.all([
           supabase.from('students').select('*').eq('id', ctx.uid).single(),
           supabase.from('subjects').select('*').order('sort').order('id'),
           supabase.from('marks').select('*').eq('student_id', ctx.uid),
-          supabase.from('conduct').select('*').eq('student_id', ctx.uid).eq('year', year),
           supabase.rpc('my_rank', { p_year: year, p_term: 1 }),
           supabase.rpc('my_rank', { p_year: year, p_term: 2 }),
           supabase.rpc('my_rank', { p_year: year, p_term: null }),
         ])
-        const bad = [st, sub, mk, cd, r1, r2, ry].find((r) => r.error)
+        const bad = [st, sub, mk, r1, r2, ry].find((r) => r.error)
         if (bad) throw bad.error
         if (off) return
         const years = [...new Set([ctx.year, ...mk.data.map((m) => m.year)])].sort((a, b) => b - a)
@@ -35,8 +34,7 @@ export default function StudentHome({ ctx }) {
           student: st.data, years, marks,
           card: buildCard({ subjects: sub.data, marks, passMark: ctx.passMark }),
           ranks: { 1: r1.data?.[0], 2: r2.data?.[0], y: ry.data?.[0] },
-          conduct: Object.fromEntries(cd.data.map((c) => [c.term, c.value])),
-          gradeAtYear: marks[0]?.grade ?? st.data.grade,
+                    gradeAtYear: marks[0]?.grade ?? st.data.grade,
         })
       } catch (e) { if (!off) setErr(e.message) }
     })()
@@ -66,11 +64,22 @@ export default function StudentHome({ ctx }) {
             <div><div className="avg-num">{card.yearly ?? '—'}<span className="muted" style={{ fontSize: '1.2rem' }}>%</span></div><div className="muted">{t('average')} · {t('yearly')}</div></div>
             {ranks.y && <div><div className="rank-num">{ranks.y.rank}<span className="muted" style={{ fontSize: '1.2rem' }}> / {ranks.y.class_size}</span></div><div className="muted">{t('rank')} · {t('yearly')}</div></div>}
           </div>
+          <div className="panel scroll no-print">
+            <table>
+              <thead><tr><th>{t('subject')}</th><th className="num">{t('term1')}</th><th className="num">{t('term2')}</th><th className="num">{t('average')} %</th></tr></thead>
+              <tbody>
+                {card.rows.map((r) => (
+                  <tr key={r.subject.id}><td>{lang === 'en' && r.subject.name_en ? r.subject.name_en : r.subject.name_am}</td>
+                    <td className="num">{r.t1 ?? '—'} / {r.max}</td><td className="num">{r.t2 ?? '—'} / {r.max}</td><td className="num">{r.avg ?? '—'}</td></tr>
+                ))}
+              </tbody>
+            </table>
+            <p className="muted">{t('status')}: {t('res_' + card.status)} ({t('passMark')} {ctx.passMark}%)</p>
+          </div>
           <div className="card-page">
             <ReportCard
-              school={ctx.school} student={student} year={year}
-              gradeText={gradeLabel(data.gradeAtYear, lang)}
-              card={card} ranks={ranks} conduct={data.conduct} passMark={ctx.passMark}
+              student={student} year={year} gradeText={gradeLabel(data.gradeAtYear, lang)}
+              card={card} ranks={ranks} cfg={ctx.settings}
             />
           </div>
         </>
