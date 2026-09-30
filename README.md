@@ -43,6 +43,26 @@ Rank is within grade + section, ties share a rank, pass mark configurable (defau
   `ክፍለ/Section`, `ጾታ/Gender`, `የወላጅ ስም`, `የወላጅ ስልክ`. Use the **Template** button. Every import creates new
   accounts (it does not update existing students), and shows the ID + password slips once.
 
+## Report card (from የተማሪዎች_ካርድ.pdf)
+One folded sheet per student: page 1 = outside (grading scale, notices, cover with student details),
+page 2 = inside (subject scores out of 100, total, average + grade word, rank, signatures, photo box, seal).
+- Each subject shows the student's **yearly** score (mean of the two semesters, as % of the subject's max).
+  Students also see the semester breakdown on screen.
+- Fixed wording lives in `src/lib/cardText.js` — edit once, every card changes.
+- Student extras used on the cover (Students → **Details**): ስም ከነ አያት, የክርስትና ስም, አጥቢያ, አድራሻ, ከተማ, ቀበሌ.
+  Parish falls back to Users → Settings → Parish; school address is printed from Settings.
+- Print: landscape, **double-sided, flip on short edge**, scale 100%. Print ONE card first and fold it to check the alignment.
+- Student photo is a blank box to paste into (no photo upload yet).
+
+## ዕቅድ (plan) tab — members & admins
+The 17-item 2019 plan from `የ2019የትምህርት_ክፍል_እቅድ.docx` is seeded on first open. Due dates come from each
+item's timing text using exact Ethiopian dates: a named month = due by the end of that month, "ታህሳስ 9" = that day,
+"ከመስከረም እስከ ነሐሴ" with target 12 = monthly. **ተከናውኗል ✓** logs a note and moves to the next due date.
+Excel export/import (matched by title) and admin-only reset are included.
+
+## Database
+Fresh install: run `supabase/schema.sql` (already includes everything).
+Already ran an older schema.sql? Run only `supabase/migration-002.sql` once, then redeploy the Edge Function.
+
 ## Not built yet
-Real report-card template (current one is a placeholder), Ethiopian-calendar ዕቅድ tab
-(needs this department's plan document and `ethiopian-calendar.js`).
+Plan completion inside the Word/PowerPoint reports, student photo upload.
