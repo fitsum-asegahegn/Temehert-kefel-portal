@@ -1,58 +1,80 @@
-import { CONDUCT } from '../lib/grades.js'
-import { useI18n } from '../i18n.jsx'
+import { BANDS, bandFor, NOTICES, VALIDITY, COVER_LINES, VERSE_COVER, VERSE_INSIDE } from '../lib/cardText.js'
 
-const fmt = (x) => (x == null ? '—' : String(Math.round(x * 100) / 100))
+const fmt = (x) => (x == null ? '' : String(Math.round(x * 100) / 100))
+const base = import.meta.env.BASE_URL || './'
+const MIN_ROWS = 7
 
-// card = buildCard(); ranks = { 1, 2, y } each { rank, class_size } | undefined
-export default function ReportCard({ school, student, year, gradeText, card, ranks = {}, conduct = {}, passMark }) {
-  const { t, lang } = useI18n()
-  const rk = (r) => (r ? <span className="rc-rank">{r.rank} / {r.class_size}</span> : '—')
-  const cd = (n) => (conduct[n] ? CONDUCT[conduct[n]][lang] : '—')
+function Field({ label, value }) {
+  return <li><span>{label}: </span><span className="bk-fill">{value || ''}</span></li>
+}
+
+// One student = one folded sheet: page 1 (outside) + page 2 (inside), as in የተማሪዎች_ካርድ.pdf.
+// card = buildCard(); ranks = { y: { rank, class_size } }. Scores are each subject's yearly % (out of 100).
+export default function ReportCard({ student, year, gradeText, card, ranks = {}, cfg = {} }) {
+  const rows = card.rows
+  const blanks = Math.max(0, MIN_ROWS - rows.length)
+  const total = rows.reduce((s, r) => s + (r.avg ?? 0), 0)
+  const band = bandFor(card.yearly)
+  const rank = ranks.y
 
   return (
-    <article className="rc">
-      <header className="rc-head">
-        <div className="rc-school">{school}</div>
-        <h2>{t('reportCard')}</h2>
-        <div className="muted">{year} ዓ/ም</div>
-      </header>
-      <dl className="rc-info">
-        <div><dt>{t('student')}:</dt><dd>{student.full_name}</dd></div>
-        <div><dt>ID:</dt><dd>{student.code}</dd></div>
-        <div><dt>{t('grade')}:</dt><dd>{gradeText}</dd></div>
-        <div><dt>{t('section')}:</dt><dd>{student.section}</dd></div>
-      </dl>
-      <div className="scroll">
-        <table className="rc-table">
-          <thead>
-            <tr>
-              <th>{t('subject')}</th><th className="num">{t('outOf')}</th>
-              <th className="num">{t('term1')}</th><th className="num">{t('term2')}</th><th className="num">{t('average')} %</th>
-            </tr>
-          </thead>
-          <tbody>
-            {card.rows.map((r) => (
-              <tr key={r.subject.id}>
-                <td>{lang === 'en' && r.subject.name_en ? r.subject.name_en : r.subject.name_am}</td>
-                <td className="num">{r.max}</td><td className="num">{fmt(r.t1)}</td><td className="num">{fmt(r.t2)}</td><td className="num">{fmt(r.avg)}</td>
-              </tr>
-            ))}
-          </tbody>
-          <tfoot>
-            <tr><td>{t('total')}</td><td className="num">{fmt(card.s1?.maxTotal)}</td><td className="num">{fmt(card.s1?.total)}</td><td className="num">{fmt(card.s2?.total)}</td><td /></tr>
-            <tr><td>{t('average')} %</td><td /><td className="num">{fmt(card.s1?.average)}</td><td className="num">{fmt(card.s2?.average)}</td><td className="num">{fmt(card.yearly)}</td></tr>
-            <tr><td>{t('rank')}</td><td /><td className="num">{rk(ranks[1])}</td><td className="num">{rk(ranks[2])}</td><td className="num">{rk(ranks.y)}</td></tr>
-            <tr><td>{t('conduct')}</td><td /><td className="num">{cd(1)}</td><td className="num">{cd(2)}</td><td /></tr>
-          </tfoot>
-        </table>
-      </div>
-      <p style={{ marginTop: '.8rem' }}>
-        <strong>{t('status')}:</strong> {t('res_' + card.status)}
-        <span className="muted"> ({t('passMark')} {passMark}%)</span>
-      </p>
-      <div className="rc-sign">
-        <div>{t('teacher')}</div><div>{lang === 'am' ? 'የክፍሉ ኃላፊ' : 'Department head'}</div><div>{lang === 'am' ? 'የወላጅ ፊርማ' : 'Parent signature'}</div>
-      </div>
-    </article>
+    <>
+      {/* ---------- page 1: outside ---------- */}
+      <section className="sheet">
+        <div className="bk-panel">
+          <h3>ነጥብ አያያዝ</h3>
+          <ul>{BANDS.map(([lo, hi, name]) => <li key={lo}><strong>ከ{hi} እስከ {lo}:</strong> {name}</li>)}</ul>
+          <img className="bk-logo" src={base + 'emblem-round.png'} alt="" />
+          <h3>ማሳሰቢያ</h3>
+          <ul>{NOTICES.map((n) => <li key={n}>{n}</li>)}</ul>
+          <p>{VALIDITY}</p>
+          <h3>የሰንበት ትምህርት ቤቱ አድራሻ:-</h3>
+          <p className="bk-fill">{cfg.school_address || ''}</p>
+        </div>
+        <div className="bk-panel">
+          <div className="bk-cover">{COVER_LINES.map((l) => <div key={l}>{l}</div>)}</div>
+          <div className="bk-emblems">
+            <img src={base + 'emblem-angels.png'} alt="" /><img src={base + 'emblem-round.png'} alt="" />
+          </div>
+          <p className="bk-verse"><em>{VERSE_COVER.text}</em> - <em>{VERSE_COVER.ref}</em></p>
+          <h3>የትምህርት ውጤት መግለጫ</h3>
+          <ul className="bk-fields">
+            <Field label="የተማሪው/ዋ ስም ከነ አያት" value={student.full_name} />
+            <Field label="የክርስትና ስም" value={student.christian_name} />
+            <Field label="ትምህርት የተከታተለበት አጥቢያ" value={student.parish || cfg.parish} />
+            <li><span>አድራሻ: </span><span className="bk-fill">{student.address}</span> <span>ከተማ: </span><span className="bk-fill">{student.city}</span> <span>ቀበሌ: </span><span className="bk-fill">{student.kebele}</span></li>
+            <li><span>የትምህርት ዘመን: </span><span className="bk-fill">{year} ዓ/ም</span> <span>ክፍል ደረጃ: </span><span className="bk-fill">{gradeText}</span></li>
+          </ul>
+        </div>
+      </section>
+
+      {/* ---------- page 2: inside ---------- */}
+      <section className="sheet">
+        <div className="bk-panel">
+          <table className="bk-table">
+            <thead><tr><th>ተ.ቁ</th><th>የትምህርት ዓይነት</th><th>ውጤት ከ 100</th></tr></thead>
+            <tbody>
+              {rows.map((r, i) => <tr key={r.subject.id}><td>{i + 1}</td><td>{r.subject.name_am}</td><td>{fmt(r.avg)}</td></tr>)}
+              {Array.from({ length: blanks }, (_, i) => <tr key={'b' + i}><td>{rows.length + i + 1}</td><td /><td /></tr>)}
+            </tbody>
+          </table>
+          <ul className="bk-sum">
+            <li>ጠቅላላ ድምር: <strong>{fmt(total)}</strong></li>
+            <li>አማካይ ውጤት: <strong>{fmt(card.yearly)}</strong>{band ? ` (${band})` : ''}</li>
+            <li>ደረጃ: <strong>{rank ? `${rank.rank} / ${rank.class_size}` : ''}</strong></li>
+          </ul>
+          <div className="bk-sign">
+            <div><hr />የሰ/ት/ቤቱ ሊ/መንበር ስምና ፊርማ</div>
+            <div><hr />የሰ/ት/ቤቱ ት/ት ክፍል ተጠሪ</div>
+          </div>
+        </div>
+        <div className="bk-panel">
+          <div className="bk-photo">የተማሪ ፎቶ</div>
+          <p className="bk-verse inside"><em>{VERSE_INSIDE.text}</em><br /><em>{VERSE_INSIDE.ref}</em></p>
+          <div className="bk-sign single" style={{ marginTop: '1.5rem', paddingTop: 0 }}><hr />የደብሩ አስተዳዳሪ ስምና ፊርማ</div>
+          <div className="bk-seal">የደብሩ ማኅተም</div>
+        </div>
+      </section>
+    </>
   )
 }
