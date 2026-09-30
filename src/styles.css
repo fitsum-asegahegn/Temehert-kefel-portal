@@ -52,6 +52,9 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 .scroll { overflow-x: auto; }
 .pill { display: inline-block; padding: .05rem .5rem; border-radius: 99px; font-size: .78rem; border: 1px solid var(--line); }
 .pill.approved { color: var(--ok); border-color: var(--ok); }
+.pill.plan-overdue { color: var(--rubric); border-color: var(--rubric); }
+.pill.plan-soon { color: var(--gold); border-color: var(--gold); }
+.pill.plan-done { color: var(--ok); border-color: var(--ok); }
 .pill.submitted { color: var(--gold); border-color: var(--gold); }
 .mark-input { width: 5.5rem; text-align: right; }
 
@@ -65,17 +68,29 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 .rank-num { font-family: var(--serif); font-size: 3rem; font-weight: 700; color: var(--rubric); line-height: 1; }
 .avg-num { font-family: var(--serif); font-size: 3rem; font-weight: 700; line-height: 1; }
 
-/* report card: double rule like a manuscript frame */
-.rc { background: #fff; border: 1px solid var(--ink); outline: 1px solid var(--ink); outline-offset: 3px; padding: 1.25rem; margin: 6px; max-width: 760px; }
-.rc-head { text-align: center; border-bottom: 2px solid var(--gold); padding-bottom: .6rem; margin-bottom: .8rem; }
-.rc-school { font-family: var(--serif); font-size: 1.25rem; font-weight: 700; }
-.rc-head h2 { margin: .1rem 0 0; }
-.rc-info { display: grid; grid-template-columns: repeat(2, 1fr); gap: .25rem 1.5rem; margin: 0 0 .9rem; }
-.rc-info div { display: flex; gap: .5rem; } .rc-info dt { color: var(--muted); } .rc-info dd { margin: 0; font-weight: 600; }
-.rc-table tfoot td { font-weight: 600; border-top: 2px solid var(--ink); }
-.rc-rank { color: var(--rubric); font-weight: 700; }
-.rc-sign { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-top: 2.2rem; font-size: .8rem; color: var(--muted); }
-.rc-sign div { border-top: 1px solid var(--ink); padding-top: .25rem; text-align: center; }
+/* report card = folded booklet sheet, two pages (outside / inside), from የተማሪዎች_ካርድ.pdf */
+.sheet { display: grid; grid-template-columns: 1fr 1fr; gap: 10mm; margin: 0 0 1.5rem; }
+.bk-panel { border: 2px solid #4ea72e; border-radius: 28px; padding: 1.2rem 1.4rem; background: #fff; font-family: var(--serif); font-size: .95rem; line-height: 1.45; position: relative; min-height: 26rem; display: flex; flex-direction: column; }
+.bk-panel h3 { font-size: 1rem; font-weight: 700; margin: .8rem 0 .4rem; }
+.bk-panel ul { margin: 0 0 .6rem; padding-left: 1.2rem; }
+.bk-panel p { margin: 0 0 .6rem; }
+.bk-logo { display: block; width: 6.5rem; margin: .6rem auto; }
+.bk-cover { text-align: center; font-weight: 700; margin: .4rem 0 .9rem; }
+.bk-emblems { display: flex; justify-content: space-around; margin-bottom: .8rem; }
+.bk-emblems img { width: 7rem; }
+.bk-verse { text-align: center; font-weight: 700; }
+.bk-fields { list-style: disc; line-height: 2; }
+.bk-fill { display: inline-block; min-width: 6rem; border-bottom: 1px solid var(--ink); font-weight: 400; padding: 0 .3rem; }
+.bk-table { border: 2px solid #1d6b1d; }
+.bk-table th, .bk-table td { border: 2px solid #1d6b1d; height: 2.4rem; font-size: 1rem; }
+.bk-table th { font-size: 1.05rem; color: var(--ink); }
+.bk-table tbody tr:nth-child(odd) td { background: #b3edba; }
+.bk-sum { list-style: disc; border: 2px solid #f79646; border-radius: 18px; padding: .8rem 1rem .8rem 2rem !important; margin: 1rem 0 !important; }
+.bk-sign { display: flex; gap: 1.5rem; justify-content: space-between; margin-top: auto; padding-top: 2.6rem; font-size: .8rem; font-weight: 700; text-align: center; }
+.bk-sign > div { flex: 1; } .bk-sign.single { display: block; } .bk-sign hr { border: 0; border-top: 2px solid var(--ink); margin: 0 0 .3rem; }
+.bk-photo { position: absolute; top: 1.2rem; right: 1.4rem; width: 6.2rem; height: 7rem; border: 2px solid #f79646; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: .7rem; text-align: center; }
+.bk-seal { text-align: center; font-weight: 700; margin-top: auto; padding: 4rem 0 1rem; font-size: .85rem; }
+.bk-verse.inside { margin-top: 9rem; }
 
 /* credential slips: 8 per A4 page */
 .slips { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0; }
@@ -83,7 +98,8 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 .slip .code { font-family: var(--serif); font-size: 1.5rem; font-weight: 700; letter-spacing: .03em; }
 .slip .pw { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 1.15rem; background: var(--paper); padding: .15rem .4rem; border-radius: 4px; }
 
-@media (max-width: 560px) { .rc-info { grid-template-columns: 1fr; } .slips { grid-template-columns: 1fr; } }
+@media (max-width: 800px) { .sheet { grid-template-columns: 1fr; } }
+@media (max-width: 560px) { .slips { grid-template-columns: 1fr; } }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
 
 @media print {
@@ -91,7 +107,9 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
   .no-print, .top, .tabs { display: none !important; }
   main { padding: 0; max-width: none; }
   .panel { border: 0; padding: 0; }
-  .card-page { break-after: page; }
-  .rc { outline-offset: 2px; margin: 0 auto; max-width: none; }
-  @page { size: A4; margin: 12mm; }
+  .card-page { display: contents; }
+  .sheet { grid-template-columns: 1fr 1fr !important; gap: 8mm; height: 186mm; margin: 0; break-after: page; break-inside: avoid; font-size: 10.5pt; }
+  .bk-panel { min-height: 0; height: 100%; overflow: hidden; }
+  .card-page:last-child .sheet:last-child { break-after: auto; }
+  @page { size: landscape; margin: 8mm; }
 }
