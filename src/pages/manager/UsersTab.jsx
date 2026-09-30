@@ -10,7 +10,7 @@ export default function UsersTab({ ctx }) {
   const [msg, setMsg] = useState({ text: '', bad: false })
   const [nf, setNf] = useState({ full_name: '', email: '', role: 'member' })
   const [cred, setCred] = useState(null)
-  const [cfg, setCfg] = useState({ pass_mark: ctx.settings.pass_mark, current_year: ctx.settings.current_year, school_name: ctx.settings.school_name })
+  const [cfg, setCfg] = useState({ pass_mark: ctx.settings.pass_mark, current_year: ctx.settings.current_year, school_name: ctx.settings.school_name, parish: ctx.settings.parish ?? '', school_address: ctx.settings.school_address ?? '' })
 
   async function load() {
     try {
@@ -59,6 +59,8 @@ export default function UsersTab({ ctx }) {
           <label>{lang === 'am' ? 'የት/ቤቱ ስም' : 'School name'}<input value={cfg.school_name} onChange={(e) => setCfg({ ...cfg, school_name: e.target.value })} size={28} /></label>
           <label>{t('year')} (ዓ/ም)<input type="number" value={cfg.current_year} onChange={(e) => setCfg({ ...cfg, current_year: e.target.value })} style={{ width: '6rem' }} /></label>
           <label>{t('passMark')} %<input type="number" value={cfg.pass_mark} onChange={(e) => setCfg({ ...cfg, pass_mark: e.target.value })} style={{ width: '5rem' }} /></label>
+          <label>{lang === 'am' ? 'አጥቢያ (በካርድ ላይ)' : 'Parish (on cards)'}<input value={cfg.parish} onChange={(e) => setCfg({ ...cfg, parish: e.target.value })} size={28} /></label>
+          <label>{lang === 'am' ? 'የሰ/ት/ቤቱ አድራሻ' : 'School address'}<input value={cfg.school_address} onChange={(e) => setCfg({ ...cfg, school_address: e.target.value })} size={28} /></label>
           <button className="btn">{t('save')}</button>
         </div>
       </form>

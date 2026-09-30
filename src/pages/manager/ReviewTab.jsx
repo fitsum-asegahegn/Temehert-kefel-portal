@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase, fetchAll } from '../../lib/supabase.js'
-import { GRADES, gradeLabel, CONDUCT } from '../../lib/grades.js'
+import { GRADES, gradeLabel } from '../../lib/grades.js'
 import { useI18n } from '../../i18n.jsx'
 
 export default function ReviewTab({ ctx }) {
@@ -11,20 +11,17 @@ export default function ReviewTab({ ctx }) {
   const [subjects, setSubjects] = useState([])
   const [students, setStudents] = useState([])
   const [marks, setMarks] = useState([])
-  const [conduct, setConduct] = useState({})
   const [msg, setMsg] = useState({ text: '', bad: false })
 
   async function load() {
     try {
-      const [sub, st, mk, cd] = await Promise.all([
+      const [sub, st, mk] = await Promise.all([
         supabase.from('subjects').select('*').order('sort').order('id'),
         supabase.from('students').select('id, full_name, code, section').eq('grade', grade).eq('active', true).order('section').order('full_name'),
         fetchAll(() => supabase.from('marks').select('*').eq('grade', grade).eq('year', year).eq('term', term)),
-        supabase.from('conduct').select('*').eq('year', year).eq('term', term),
       ])
-      if (sub.error || st.error || cd.error) throw sub.error || st.error || cd.error
+      if (sub.error || st.error) throw sub.error || st.error
       setSubjects(sub.data); setStudents(st.data); setMarks(mk)
-      setConduct(Object.fromEntries(cd.data.map((c) => [c.student_id, c.value])))
     } catch (e) { setMsg({ text: e.message, bad: true }) }
   }
   useEffect(() => { load() }, [year, term, grade])
@@ -35,12 +32,6 @@ export default function ReviewTab({ ctx }) {
     const { error } = await q
     if (error) return setMsg({ text: error.message, bad: true })
     setMsg({ text: '✓', bad: false }); load()
-  }
-
-  async function setConductFor(studentId, value) {
-    setConduct({ ...conduct, [studentId]: value })
-    const { error } = await supabase.from('conduct').upsert({ student_id: studentId, year, term, value }, { onConflict: 'student_id,year,term' })
-    if (error) setMsg({ text: error.message, bad: true })
   }
 
   const stName = Object.fromEntries(students.map((s) => [s.id, s.full_name]))
@@ -89,24 +80,6 @@ export default function ReviewTab({ ctx }) {
         )
       })}
 
-      <div className="panel">
-        <h2>{t('conduct')}</h2>
-        <table>
-          <tbody>
-            {students.map((s) => (
-              <tr key={s.id}>
-                <td>{s.full_name}</td>
-                <td>
-                  <select value={conduct[s.id] ?? ''} onChange={(e) => setConductFor(s.id, e.target.value)} aria-label={s.full_name}>
-                    <option value="">—</option>
-                    {Object.entries(CONDUCT).map(([k, v]) => <option key={k} value={k}>{v[lang]}</option>)}
-                  </select>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
     </>
   )
 }

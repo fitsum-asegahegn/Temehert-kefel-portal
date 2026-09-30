@@ -36,10 +36,9 @@ export default function CardsTab({ ctx }) {
       if (mode === 'selected') marks = marks.filter((m) => picked.has(m.student_id))
       if (!marks.length) { setBusy(false); return setMsg(t('noResults')) }
 
-      const [subjects, students, conductRows] = await Promise.all([
+      const [subjects, students] = await Promise.all([
         supabase.from('subjects').select('*').order('sort').order('id').then((r) => { if (r.error) throw r.error; return r.data }),
         fetchAll(() => supabase.from('students').select('*')),
-        fetchAll(() => supabase.from('conduct').select('*').eq('year', year)),
       ])
       const stById = Object.fromEntries(students.map((s) => [s.id, s]))
 
@@ -59,7 +58,6 @@ export default function CardsTab({ ctx }) {
       for (const m of marks) (byStudent.get(m.student_id) ?? byStudent.set(m.student_id, []).get(m.student_id)).push(m)
       const out = [...byStudent.entries()].map(([id, ms]) => ({
         student: stById[id], gradeAt: ms[0].grade, sectionAt: ms[0].section, ranks: rank[id] || {},
-        conduct: Object.fromEntries(conductRows.filter((c) => c.student_id === id).map((c) => [c.term, c.value])),
         card: buildCard({ subjects, marks: ms, passMark: ctx.passMark }),
       })).filter((c) => c.student)
       out.sort((a, b) => a.gradeAt - b.gradeAt || a.sectionAt.localeCompare(b.sectionAt) || a.student.full_name.localeCompare(b.student.full_name))
@@ -117,8 +115,8 @@ export default function CardsTab({ ctx }) {
       {cards?.map((c) => (
         <div className="card-page" key={c.student.id}>
           <ReportCard
-            school={ctx.school} student={{ ...c.student, section: c.sectionAt }} year={year}
-            gradeText={gradeLabel(c.gradeAt, lang)} card={c.card} ranks={c.ranks} conduct={c.conduct} passMark={ctx.passMark}
+            student={{ ...c.student, section: c.sectionAt }} year={year}
+            gradeText={gradeLabel(c.gradeAt, lang)} card={c.card} ranks={c.ranks} cfg={ctx.settings}
           />
         </div>
       ))}

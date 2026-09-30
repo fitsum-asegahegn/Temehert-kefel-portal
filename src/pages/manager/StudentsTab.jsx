@@ -14,6 +14,7 @@ export default function StudentsTab({ ctx }) {
   const [slips, setSlips] = useState(null)
   const [msg, setMsg] = useState({ text: '', bad: false })
   const [busy, setBusy] = useState(false)
+  const [edit, setEdit] = useState(null)
   const [form, setForm] = useState({ names: '', grade: 1, section: 'A' })
 
   async function load() {
@@ -65,6 +66,14 @@ export default function StudentsTab({ ctx }) {
       load()
     } catch (e2) { setMsg({ text: e2.message, bad: true }) }
     setBusy(false)
+  }
+
+  async function saveEdit(e) {
+    e.preventDefault()
+    const { id, full_name, section, christian_name, parish, address, city, kebele, guardian_name, guardian_phone } = edit
+    const { error } = await supabase.from('students').update({ full_name, section, christian_name, parish, address, city, kebele, guardian_name, guardian_phone }).eq('id', id)
+    if (error) return setMsg({ text: error.message, bad: true })
+    setEdit(null); load()
   }
 
   async function reset(s) {
@@ -122,6 +131,18 @@ export default function StudentsTab({ ctx }) {
         </div>
       </form>
 
+      {edit && (
+        <form className="panel" onSubmit={saveEdit}>
+          <h2>{edit.code}</h2>
+          <div className="row">
+            {[['full_name', lang === 'am' ? 'ሙሉ ስም ከነ አያት' : 'Full name'], ['christian_name', lang === 'am' ? 'የክርስትና ስም' : 'Christian name'], ['section', t('section')], ['parish', lang === 'am' ? 'አጥቢያ' : 'Parish'], ['address', lang === 'am' ? 'አድራሻ' : 'Address'], ['city', lang === 'am' ? 'ከተማ' : 'City'], ['kebele', lang === 'am' ? 'ቀበሌ' : 'Kebele'], ['guardian_name', lang === 'am' ? 'የወላጅ ስም' : 'Guardian'], ['guardian_phone', lang === 'am' ? 'የወላጅ ስልክ' : 'Guardian phone']].map(([k, label]) => (
+              <label key={k}>{label}<input value={edit[k] ?? ''} onChange={(e) => setEdit({ ...edit, [k]: e.target.value })} required={k === 'full_name'} /></label>
+            ))}
+          </div>
+          <button className="btn">{t('save')}</button> <button type="button" className="btn ghost" onClick={() => setEdit(null)}>{t('cancel')}</button>
+        </form>
+      )}
+
       <div className="panel">
         <div className="row">
           <label>{t('grade')}
@@ -146,7 +167,7 @@ export default function StudentsTab({ ctx }) {
                   <td><input type="checkbox" checked={picked.has(s.id)} aria-label={s.full_name}
                     onChange={() => { const n = new Set(picked); n.has(s.id) ? n.delete(s.id) : n.add(s.id); setPicked(n) }} /></td>
                   <td>{s.full_name}</td><td>{s.code}</td><td>{gradeLabel(s.grade, lang)} {s.section}</td>
-                  <td><button className="btn ghost small" onClick={() => reset(s)}>{lang === 'am' ? 'የይለፍ ቃል ቀይር' : 'Reset password'}</button></td>
+                  <td><button className="btn ghost small" onClick={() => setEdit(s)}>{lang === 'am' ? 'ዝርዝር' : 'Details'}</button> <button className="btn ghost small" onClick={() => reset(s)}>{lang === 'am' ? 'የይለፍ ቃል ቀይር' : 'Reset password'}</button></td>
                 </tr>
               ))}
             </tbody>
