@@ -75,6 +75,8 @@ Deno.serve(async (req) => {
             id, seq, code, full_name: name, grade,
             section: s.section || 'A', gender: s.gender ?? null,
             guardian_name: s.guardian_name ?? null, guardian_phone: s.guardian_phone ?? null,
+            christian_name: s.christian_name ?? null, parish: s.parish ?? null,
+            address: s.address ?? null, city: s.city ?? null, kebele: s.kebele ?? null,
           })).error
         }
         if (fail) {
