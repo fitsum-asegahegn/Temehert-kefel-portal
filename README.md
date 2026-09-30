@@ -64,5 +64,13 @@ Excel export/import (matched by title) and admin-only reset are included.
 Fresh install: run `supabase/schema.sql` (already includes everything).
 Already ran an older schema.sql? Run only `supabase/migration-002.sql` once, then redeploy the Edge Function.
 
+## Flexible marks (assignment / mid / final / anything)
+Teacher → pick course + semester → **Assessments**: add or remove rows (name + points). The rows must add up to the
+subject's maximum (100). Then enter each student's score per row; the total is calculated live and saved as that
+student's mark. Submit → member approves (as before). After approval the rows and scores are locked.
+Student → taps a course name in the results table → popup with each assessment, the result, and the total (e.g. 69 / 100).
+Students see the breakdown only after their mark is approved (enforced by RLS).
+Database: fresh install = `schema.sql`; otherwise run `supabase/migration-003.sql` once.
+
 ## Not built yet
 Plan completion inside the Word/PowerPoint reports, student photo upload.
