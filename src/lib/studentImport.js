@@ -7,6 +7,11 @@ const KEYS = {
   gender: ['ጾታ', 'gender', 'sex'],
   guardian_name: ['የወላጅ ስም', 'guardian', 'guardian name', 'parent'],
   guardian_phone: ['የወላጅ ስልክ', 'ስልክ', 'phone', 'guardian phone'],
+  christian_name: ['የክርስትና ስም', 'christian name'],
+  parish: ['አጥቢያ', 'parish'],
+  address: ['አድራሻ', 'address'],
+  city: ['ከተማ', 'city'],
+  kebele: ['ቀበሌ', 'kebele'],
 }
 const pick = (row, keys) => {
   for (const k of Object.keys(row)) if (keys.includes(k.trim().toLowerCase())) return String(row[k]).trim()
@@ -36,6 +41,8 @@ export async function parseStudentSheet(file) {
     students.push({
       full_name, grade, section: pick(row, KEYS.section) || 'A', gender: parseGender(pick(row, KEYS.gender)),
       guardian_name: pick(row, KEYS.guardian_name) || null, guardian_phone: pick(row, KEYS.guardian_phone) || null,
+      christian_name: pick(row, KEYS.christian_name) || null, parish: pick(row, KEYS.parish) || null,
+      address: pick(row, KEYS.address) || null, city: pick(row, KEYS.city) || null, kebele: pick(row, KEYS.kebele) || null,
     })
   })
   return { students, skipped }
