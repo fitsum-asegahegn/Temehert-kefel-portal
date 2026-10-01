@@ -294,3 +294,126 @@ create policy plan_items_delete on public.plan_items for delete using (public.is
 create policy plan_log_select on public.plan_log for select using (public.is_manager());
 create policy plan_log_insert on public.plan_log for insert with check (public.is_manager());
 create policy plan_log_delete on public.plan_log for delete using (public.is_manager());
+
+-- ===== Assessment components (same as migration-003.sql) =====
+create table if not exists public.assessments (
+  id bigint generated always as identity primary key,
+  subject_id bigint not null references public.subjects(id) on delete cascade,
+  grade int not null check (grade between 1 and 12),
+  year int not null,
+  term int not null check (term in (1,2)),
+  name text not null,
+  max_points numeric not null check (max_points > 0),
+  sort int not null default 0
+);
+create index if not exists assessments_lookup on public.assessments(subject_id, grade, year, term);
+
+create table if not exists public.assessment_scores (
+  assessment_id bigint not null references public.assessments(id) on delete cascade,
+  student_id uuid not null references public.students(id) on delete cascade,
+  score numeric not null check (score >= 0),
+  primary key (assessment_id, student_id)
+);
+
+create or replace function public.assessment_score_check() returns trigger
+language plpgsql as $$
+declare mx numeric;
+begin
+  select max_points into mx from assessments where id = new.assessment_id;
+  if new.score > mx then raise exception 'Score % is above the maximum %', new.score, mx; end if;
+  return new;
+end $$;
+drop trigger if exists assessment_score_check_trg on public.assessment_scores;
+create trigger assessment_score_check_trg before insert or update on public.assessment_scores
+  for each row execute function public.assessment_score_check();
+
+-- Once any mark of this course/term is approved, its component list is frozen.
+create or replace function public.term_locked(p_subject bigint, p_grade int, p_year int, p_term int) returns boolean
+language sql stable security definer set search_path = public as $$
+  select exists (select 1 from marks where subject_id = p_subject and grade = p_grade
+                 and year = p_year and term = p_term and status = 'approved')
+$$;
+-- A student may see a component list only after THEIR mark for it is approved.
+create or replace function public.student_sees_assessment(p_subject bigint, p_grade int, p_year int, p_term int) returns boolean
+language sql stable security definer set search_path = public as $$
+  select exists (select 1 from marks where student_id = auth.uid() and subject_id = p_subject and grade = p_grade
+                 and year = p_year and term = p_term and status = 'approved')
+$$;
+create or replace function public.a_teaches(p_assessment bigint) returns boolean
+language sql stable security definer set search_path = public as $$
+  select exists (select 1 from assessments a where a.id = p_assessment and public.teaches(a.subject_id, a.grade))
+$$;
+create or replace function public.a_visible_to_student(p_assessment bigint) returns boolean
+language sql stable security definer set search_path = public as $$
+  select exists (select 1 from assessments a where a.id = p_assessment
+                 and public.student_sees_assessment(a.subject_id, a.grade, a.year, a.term))
+$$;
+-- Teachers write component scores only for their course, and only while that student's mark is not approved.
+create or replace function public.can_write_score(p_assessment bigint, p_student uuid) returns boolean
+language sql stable security definer set search_path = public as $$
+  select coalesce(public.is_manager(), false) or (
+    public.my_role() = 'teacher' and exists (
+      select 1 from assessments a
+      where a.id = p_assessment and public.teaches(a.subject_id, a.grade)
+        and not exists (select 1 from marks m where m.student_id = p_student and m.subject_id = a.subject_id
+                        and m.year = a.year and m.term = a.term and m.status = 'approved')))
+$$;
+
+alter table public.assessments enable row level security;
+alter table public.assessment_scores enable row level security;
+
+create policy assessments_select on public.assessments for select using (
+  public.is_manager()
+  or (public.my_role() = 'teacher' and public.teaches(subject_id, grade))
+  or (public.my_role() = 'student' and public.student_sees_assessment(subject_id, grade, year, term)));
+create policy assessments_insert on public.assessments for insert with check (
+  public.is_manager()
+  or (public.my_role() = 'teacher' and public.teaches(subject_id, grade) and not public.term_locked(subject_id, grade, year, term)));
+create policy assessments_update on public.assessments for update
+  using (public.is_manager() or (public.my_role() = 'teacher' and public.teaches(subject_id, grade) and not public.term_locked(subject_id, grade, year, term)))
+  with check (public.is_manager() or (public.my_role() = 'teacher' and public.teaches(subject_id, grade) and not public.term_locked(subject_id, grade, year, term)));
+create policy assessments_delete on public.assessments for delete
+  using (public.is_manager() or (public.my_role() = 'teacher' and public.teaches(subject_id, grade) and not public.term_locked(subject_id, grade, year, term)));
+
+create policy ascores_select on public.assessment_scores for select using (
+  public.is_manager()
+  or (public.my_role() = 'teacher' and public.a_teaches(assessment_id))
+  or (public.my_role() = 'student' and student_id = auth.uid() and public.a_visible_to_student(assessment_id)));
+create policy ascores_insert on public.assessment_scores for insert with check (public.can_write_score(assessment_id, student_id));
+create policy ascores_update on public.assessment_scores for update
+  using (public.can_write_score(assessment_id, student_id)) with check (public.can_write_score(assessment_id, student_id));
+create policy ascores_delete on public.assessment_scores for delete using (public.can_write_score(assessment_id, student_id));
+
+-- ===== Student photos (same as migration-004.sql) =====
+alter table public.students
+  add column if not exists photo_path text,
+  add column if not exists photo_updated_at timestamptz;
+
+-- Private bucket: nobody can open a photo without being signed in and allowed by the rules below.
+insert into storage.buckets (id, name, public)
+values ('student-photos', 'student-photos', false)
+on conflict (id) do nothing;
+
+-- Each person's photos live in a folder named after their own user id: <uid>/<timestamp>.jpg
+-- A student can add/replace/delete only inside their own folder; members and admins can handle any folder.
+create policy student_photos_select on storage.objects for select using (
+  bucket_id = 'student-photos' and ((storage.foldername(name))[1] = auth.uid()::text or public.is_manager()));
+create policy student_photos_insert on storage.objects for insert with check (
+  bucket_id = 'student-photos' and ((storage.foldername(name))[1] = auth.uid()::text or public.is_manager()));
+create policy student_photos_update on storage.objects for update
+  using (bucket_id = 'student-photos' and ((storage.foldername(name))[1] = auth.uid()::text or public.is_manager()))
+  with check (bucket_id = 'student-photos' and ((storage.foldername(name))[1] = auth.uid()::text or public.is_manager()));
+create policy student_photos_delete on storage.objects for delete using (
+  bucket_id = 'student-photos' and ((storage.foldername(name))[1] = auth.uid()::text or public.is_manager()));
+
+-- A student may change ONLY their own photo_path (students can't edit the rest of their row).
+create or replace function public.set_my_photo(p_path text) returns void
+language plpgsql security definer set search_path = public as $$
+begin
+  if p_path is null or p_path not like auth.uid()::text || '/%' then
+    raise exception 'Invalid photo path';
+  end if;
+  update students set photo_path = p_path, photo_updated_at = now() where id = auth.uid();
+end $$;
+revoke execute on function public.set_my_photo(text) from public, anon;
+grant execute on function public.set_my_photo(text) to authenticated;
