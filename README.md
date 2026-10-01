@@ -81,5 +81,16 @@ Student → taps a course name in the results table → popup with each assessme
 Students see the breakdown only after their mark is approved (enforced by RLS).
 Database: fresh install = `schema.sql`; otherwise run `supabase/migration-003.sql` once.
 
+## Student photo (printed on the report card)
+- After the first password change, a student **must upload a photo** before seeing anything else. The screen says the photo
+  is printed on the report card. The photo is centre-cropped and shrunk on the phone (about 30 KB) before upload.
+- The student can **change the photo any time** from the "Change photo" button at the top of their results screen.
+- Members/admins can also add or replace a student's photo: Students → **Details** (useful if a student has no phone).
+- The photo appears in the photo box on the card, in the PDF download and in the browser print. If a student has no photo yet,
+  the box stays empty for pasting.
+- Photos are stored in a **private** Supabase Storage bucket (`student-photos`): a student can only reach their own folder;
+  members/admins can reach all. Fresh install = `schema.sql`; otherwise run `supabase/migration-004.sql` once.
+- Students who already have accounts are asked for a photo the next time they sign in.
+
 ## Not built yet
-Plan completion inside the Word/PowerPoint reports, student photo upload.
+Plan completion inside the Word/PowerPoint reports.
