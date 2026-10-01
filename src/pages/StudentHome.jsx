@@ -1,16 +1,18 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase.js'
 import { buildCard } from '../lib/calc.js'
 import { gradeLabel } from '../lib/grades.js'
 import { useI18n } from '../i18n.jsx'
 import ReportCard from '../components/ReportCard.jsx'
 import CourseModal from '../components/CourseModal.jsx'
+import PdfButton from '../components/PdfButton.jsx'
 
 export default function StudentHome({ ctx }) {
   const { t, lang } = useI18n()
   const [year, setYear] = useState(ctx.year)
   const [data, setData] = useState(null)
   const [err, setErr] = useState('')
+  const cardRef = useRef(null)
   const [open, setOpen] = useState(null) // subject whose breakdown is showing
 
   useEffect(() => {
@@ -66,6 +68,7 @@ export default function StudentHome({ ctx }) {
             {data.years.map((y) => <option key={y} value={y}>{y}</option>)}
           </select>
         </label>
+        {card.rows.length > 0 && <PdfButton rootRef={cardRef} name={`report-card-${year}`} />}
         {card.rows.length > 0 && <button className="btn ghost" onClick={() => window.print()}>{t('print')}</button>}
       </div>
 
@@ -89,7 +92,7 @@ export default function StudentHome({ ctx }) {
             </table>
             <p className="muted">{t('status')}: {t('res_' + card.status)} ({t('passMark')} {ctx.passMark}%)</p>
           </div>
-          <div className="card-page">
+          <div className="card-page" ref={cardRef}>
             <ReportCard
               student={student} year={year} gradeText={gradeLabel(data.gradeAtYear, lang)}
               card={card} ranks={ranks} cfg={ctx.settings}
