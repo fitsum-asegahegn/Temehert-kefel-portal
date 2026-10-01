@@ -3,6 +3,8 @@ import { supabase, fetchAll, manage } from '../../lib/supabase.js'
 import { GRADES, gradeLabel } from '../../lib/grades.js'
 import { useI18n } from '../../i18n.jsx'
 import CredentialSlips from '../../components/CredentialSlips.jsx'
+import PhotoUpload from '../../components/PhotoUpload.jsx'
+import { photoUrl } from '../../lib/photos.js'
 import { parseStudentSheet, downloadStudentTemplate } from '../../lib/studentImport.js'
 
 export default function StudentsTab({ ctx }) {
@@ -15,6 +17,8 @@ export default function StudentsTab({ ctx }) {
   const [msg, setMsg] = useState({ text: '', bad: false })
   const [busy, setBusy] = useState(false)
   const [edit, setEdit] = useState(null)
+  const [editPhoto, setEditPhoto] = useState(null)
+  useEffect(() => { setEditPhoto(null); if (edit?.photo_path) photoUrl(edit.photo_path).then(setEditPhoto) }, [edit?.id, edit?.photo_path])
   const [form, setForm] = useState({ names: '', grade: 1, section: 'A' })
 
   async function load() {
@@ -140,6 +144,9 @@ export default function StudentsTab({ ctx }) {
             ))}
           </div>
           <button className="btn">{t('save')}</button> <button type="button" className="btn ghost" onClick={() => setEdit(null)}>{t('cancel')}</button>
+          <h3 style={{ marginTop: '1rem' }}>{t('photoTitle')}</h3>
+          <PhotoUpload targetId={edit.id} currentUrl={editPhoto} oldPath={edit.photo_path}
+            onDone={(path) => { setEdit({ ...edit, photo_path: path }); load() }} />
         </form>
       )}
 

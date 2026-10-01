@@ -2,9 +2,10 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { supabase, fetchAll } from '../../lib/supabase.js'
 import { GRADES, gradeLabel } from '../../lib/grades.js'
 import { buildCard } from '../../lib/calc.js'
+import { loadPhotos } from '../../lib/photos.js'
 import { useI18n } from '../../i18n.jsx'
 import ReportCard from '../../components/ReportCard.jsx'
-import PdfButton from '../../components/PdfButton.jsx'
+import PdfButton, { useCardLayout } from '../../components/PdfButton.jsx'
 
 // Report cards for: every grade, one grade, or hand-picked students. Approved marks only.
 export default function CardsTab({ ctx }) {
@@ -19,6 +20,7 @@ export default function CardsTab({ ctx }) {
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState('')
   const cardsRef = useRef(null)
+  const [layout, setLayout] = useCardLayout()
 
   useEffect(() => {
     fetchAll(() => supabase.from('students').select('id, full_name, code, grade, section').order('grade').order('full_name'))
@@ -63,6 +65,8 @@ export default function CardsTab({ ctx }) {
         card: buildCard({ subjects, marks: ms, passMark: ctx.passMark }),
       })).filter((c) => c.student)
       out.sort((a, b) => a.gradeAt - b.gradeAt || a.sectionAt.localeCompare(b.sectionAt) || a.student.full_name.localeCompare(b.student.full_name))
+      const urls = await loadPhotos(out.map((c) => c.student.photo_path))
+      out.forEach((c) => { c.photo = urls[c.student.photo_path] ?? null })
       setCards(out)
     } catch (e) { setMsg(e.message) }
     setBusy(false)
@@ -88,8 +92,8 @@ export default function CardsTab({ ctx }) {
           <button className="btn" disabled={busy || (mode === 'selected' && !picked.size)} onClick={generate}>
             {busy ? t('loading') : (lang === 'am' ? 'ካርድ አውጣ' : 'Generate')}
           </button>
-          {cards && <PdfButton rootRef={cardsRef} name={`report-cards-${year}-${mode === 'grade' ? 'grade' + grade : mode}`} />}
-          {cards && <button className="btn ghost" onClick={() => window.print()}>{t('print')} ({cards.length})</button>}
+          {cards && <PdfButton rootRef={cardsRef} layout={layout} setLayout={setLayout} name={`report-cards-${year}-${mode === 'grade' ? 'grade' + grade : mode}`} />}
+          {cards && layout === 'side' && <button className="btn ghost" onClick={() => window.print()}>{t('print')} ({cards.length})</button>}
         </div>
         {msg && <p className="err" role="alert">{msg}</p>}
 
@@ -120,7 +124,7 @@ export default function CardsTab({ ctx }) {
         <div className="card-page" key={c.student.id}>
           <ReportCard
             student={{ ...c.student, section: c.sectionAt }} year={year}
-            gradeText={gradeLabel(c.gradeAt, lang)} card={c.card} ranks={c.ranks} cfg={ctx.settings}
+            gradeText={gradeLabel(c.gradeAt, lang)} card={c.card} ranks={c.ranks} cfg={ctx.settings} photoUrl={c.photo}
           />
         </div>
       ))}
