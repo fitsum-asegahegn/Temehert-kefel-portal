@@ -20,6 +20,15 @@ const prefix = (g: number) => (g === 1 ? 'A' : g === 2 ? 'B' : String(g - 3))
 const codeOf = (g: number, seq: number) => `${SCHOOL}/${BATCH}/${prefix(g)}${String(seq).padStart(3, '0')}`
 const emailOf = (code: string) => code.toLowerCase().replaceAll('/', '-') + '@' + DOMAIN
 
+// Students use a 4-digit PIN. Supabase won't accept passwords shorter than 6, so a fixed ending is added behind the
+// scenes (the app does the same when a student signs in). Keep it identical to PIN_PAD in the web app.
+const PIN_PAD = Deno.env.get('PIN_PAD') ?? 'fts-pin'
+const genPin = () => {
+  const b = new Uint32Array(1)
+  crypto.getRandomValues(b)
+  return String(b[0] % 10000).padStart(4, '0')
+}
+
 const ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789' // no 0/O/1/l/I
 const genPassword = (n = 8) => {
   const b = new Uint32Array(n)
@@ -62,9 +71,9 @@ Deno.serve(async (req) => {
         if (seq >= 999) { errors.push({ full_name: name, error: 'All 999 ID numbers are used' }); continue }
         seq++
         const code = codeOf(grade, seq)
-        const password = genPassword()
+        const pin = genPin()
         const { data: u, error: ue } = await admin.auth.admin.createUser({
-          email: emailOf(code), password, email_confirm: true, user_metadata: { full_name: name },
+          email: emailOf(code), password: pin + PIN_PAD, email_confirm: true, user_metadata: { full_name: name },
         })
         if (ue || !u?.user) { seq--; errors.push({ full_name: name, error: ue?.message ?? 'Could not create account' }); continue }
         const id = u.user.id
@@ -85,7 +94,9 @@ Deno.serve(async (req) => {
           errors.push({ full_name: name, error: fail.message })
           continue
         }
-        created.push({ id, full_name: name, code, grade, password })
+        // keep the first password so the slip can be re-printed (deleted automatically once the student changes it)
+        await admin.from('initial_passwords').upsert({ student_id: id, password: pin })
+        created.push({ id, full_name: name, code, grade, password: pin })
       }
       return json({ created, errors })
     }
@@ -115,11 +126,13 @@ Deno.serve(async (req) => {
       if (!target) return json({ error: 'User not found' }, 404)
       if (['member', 'admin'].includes(target.role) && callerRole !== 'admin')
         return json({ error: 'Only an admin can reset a member' }, 403)
-      const password = genPassword()
-      const { error } = await admin.auth.admin.updateUserById(body.user_id, { password })
+      const shown = target.role === 'student' ? genPin() : genPassword() // what gets printed / shown
+      const actual = target.role === 'student' ? shown + PIN_PAD : shown
+      const { error } = await admin.auth.admin.updateUserById(body.user_id, { password: actual })
       if (error) return json({ error: error.message }, 400)
       await admin.from('profiles').update({ must_change_password: true }).eq('id', body.user_id)
-      return json({ password })
+      if (target.role === 'student') await admin.from('initial_passwords').upsert({ student_id: body.user_id, password: shown })
+      return json({ password: shown })
     }
 
     // ---- promote: moves [{id, grade}]  (grade 13 = graduate: account deactivated, ID unchanged)
