@@ -9,6 +9,8 @@ import ManagerHome from './pages/ManagerHome.jsx'
 
 const PAGES = { student: StudentHome, teacher: TeacherHome, member: ManagerHome, admin: ManagerHome }
 
+const VERSION = `v${__APP_VERSION__} · ${__BUILD_TIME__} UTC`
+
 function Root() {
   const { t, lang, setLang } = useI18n()
   const [session, setSession] = useState(undefined)
@@ -41,7 +43,7 @@ function Root() {
 
   if (!configured) return <div className="login"><div className="panel err">{t('notConfigured')}</div></div>
   if (session === undefined || (session && !me)) return <div className="login muted">{t('loading')}</div>
-  if (!session) return <Login />
+  if (!session) return <><Login /><p className="muted" style={{ textAlign: 'center' }}>{VERSION}</p></>
   if (me.mustChange) return <ChangePassword uid={uid} onDone={() => setMe({ ...me, mustChange: false })} />
 
   const Page = PAGES[me.role]
@@ -65,6 +67,7 @@ function Root() {
         {Page ? <Page ctx={ctx} /> : (
           <div className="panel"><h2>{t('pendingTitle')}</h2><p>{t('pendingBody')}</p></div>
         )}
+        <p className="muted no-print" style={{ textAlign: 'center', marginTop: '2rem' }}>{VERSION}</p>
       </main>
     </>
   )
