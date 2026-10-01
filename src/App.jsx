@@ -6,6 +6,7 @@ import ChangePassword from './pages/ChangePassword.jsx'
 import StudentHome from './pages/StudentHome.jsx'
 import TeacherHome from './pages/TeacherHome.jsx'
 import ManagerHome from './pages/ManagerHome.jsx'
+import PhotoUpload from './components/PhotoUpload.jsx'
 
 const PAGES = { student: StudentHome, teacher: TeacherHome, member: ManagerHome, admin: ManagerHome }
 
@@ -35,7 +36,14 @@ function Root() {
         supabase.from('settings').select('key, value'),
       ])
       if (off) return
-      setMe({ role: r.data?.role || 'pending', name: p.data?.full_name || '', mustChange: !!p.data?.must_change_password })
+      const role = r.data?.role || 'pending'
+      let hasPhoto = true
+      if (role === 'student') {
+        const ph = await supabase.from('students').select('photo_path').eq('id', uid).maybeSingle()
+        hasPhoto = !!ph.data?.photo_path
+      }
+      if (off) return
+      setMe({ role, name: p.data?.full_name || '', mustChange: !!p.data?.must_change_password, hasPhoto })
       if (s.data) setSettings((prev) => ({ ...prev, ...Object.fromEntries(s.data.map((x) => [x.key, x.value])) }))
     })()
     return () => { off = true }
@@ -45,6 +53,19 @@ function Root() {
   if (session === undefined || (session && !me)) return <div className="login muted">{t('loading')}</div>
   if (!session) return <><Login /><p className="muted" style={{ textAlign: 'center' }}>{VERSION}</p></>
   if (me.mustChange) return <ChangePassword uid={uid} onDone={() => setMe({ ...me, mustChange: false })} />
+
+  // A student must add a photo (it is printed on the report card) before seeing anything else.
+  if (me.role === 'student' && !me.hasPhoto) {
+    return (
+      <div className="login">
+        <div className="panel">
+          <h1>{t('photoTitle')}</h1>
+          <PhotoUpload targetId={uid} self required onDone={() => setMe({ ...me, hasPhoto: true })} />
+          <button className="btn ghost small" style={{ marginTop: '1rem' }} onClick={() => supabase.auth.signOut()}>{t('signOut')}</button>
+        </div>
+      </div>
+    )
+  }
 
   const Page = PAGES[me.role]
   const ctx = {

@@ -102,6 +102,8 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 .bk-sign { display: flex; gap: 1.5rem; justify-content: space-between; margin-top: auto; padding-top: 2.6rem; font-size: .8rem; font-weight: 700; text-align: center; }
 .bk-sign > div { flex: 1; } .bk-sign.single { display: block; } .bk-sign hr { border: 0; border-top: 2px solid var(--ink); margin: 0 0 .3rem; }
 .bk-photo { position: absolute; top: 1.2rem; right: 1.4rem; width: 6.2rem; height: 7rem; border: 2px solid #f79646; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: .7rem; text-align: center; }
+.bk-photo { overflow: hidden; padding: 0; }
+.bk-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .bk-seal { text-align: center; font-weight: 700; margin-top: auto; padding: 4rem 0 1rem; font-size: .85rem; }
 .bk-verse.inside { margin-top: 9rem; }
 
