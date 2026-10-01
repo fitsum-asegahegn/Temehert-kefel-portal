@@ -68,6 +68,19 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 .rank-num { font-family: var(--serif); font-size: 3rem; font-weight: 700; color: var(--rubric); line-height: 1; }
 .avg-num { font-family: var(--serif); font-size: 3rem; font-weight: 700; line-height: 1; }
 
+/* course result popup */
+.link { background: none; border: 0; padding: 0; color: #0b63ce; text-decoration: underline; cursor: pointer; text-align: left; font: inherit; }
+.modal-bg { position: fixed; inset: 0; background: rgba(22,33,58,.55); display: flex; align-items: flex-start; justify-content: center; padding: 1rem; overflow-y: auto; z-index: 20; }
+.modal { background: #fff; width: 100%; max-width: 520px; border-radius: 6px; margin-top: 4vh; }
+.modal-head { display: flex; align-items: center; justify-content: space-between; padding: .9rem 1rem; border-bottom: 1px solid var(--line); }
+.modal-head h2 { margin: 0; }
+.modal-course { background: var(--paper); color: #0b63ce; font-weight: 600; padding: .7rem 1rem; }
+.modal-term { padding: .5rem 1rem 0; color: var(--muted); font-size: .85rem; }
+.modal table th { background: #ddeedb; color: var(--ink); }
+.modal table tbody tr:nth-child(odd) td { background: var(--paper); }
+.modal-total { background: #ddeedb; text-align: right; font-weight: 700; padding: .6rem 1rem; margin-bottom: .6rem; }
+.modal-foot { padding: .8rem 1rem; border-top: 1px solid var(--line); text-align: right; }
+
 /* report card = folded booklet sheet, two pages (outside / inside), from የተማሪዎች_ካርድ.pdf */
 .sheet { display: grid; grid-template-columns: 1fr 1fr; gap: 10mm; margin: 0 0 1.5rem; }
 .bk-panel { border: 2px solid #4ea72e; border-radius: 28px; padding: 1.2rem 1.4rem; background: #fff; font-family: var(--serif); font-size: .95rem; line-height: 1.45; position: relative; min-height: 26rem; display: flex; flex-direction: column; }
@@ -92,6 +105,13 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 .bk-seal { text-align: center; font-weight: 700; margin-top: auto; padding: 4rem 0 1rem; font-size: .85rem; }
 .bk-verse.inside { margin-top: 9rem; }
 
+/* landscape PDF capture: JS sets the exact pixel size of each sheet */
+.pdf-sheet { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin: 0; background: #fff; }
+.pdf-sheet .bk-panel { min-height: 0; height: 100%; overflow: hidden; font-size: 1.12rem; padding: 1.5rem 1.7rem; }
+.pdf-sheet .bk-table th, .pdf-sheet .bk-table td { height: 3.1rem; font-size: 1.1rem; }
+.pdf-sheet .bk-logo { width: 8rem; }
+.pdf-sheet .bk-emblems img { width: 9rem; }
+
 /* credential slips: 8 per A4 page */
 .slips { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0; }
 .slip { border: 1px dashed var(--muted); padding: .8rem 1rem; min-height: 62mm; break-inside: avoid; }
@@ -108,8 +128,8 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
   main { padding: 0; max-width: none; }
   .panel { border: 0; padding: 0; }
   .card-page { display: contents; }
-  .sheet { grid-template-columns: 1fr 1fr !important; gap: 8mm; height: 186mm; margin: 0; break-after: page; break-inside: avoid; font-size: 10.5pt; }
+  .sheet { grid-template-columns: 1fr 1fr !important; gap: 8mm; height: 197mm; margin: 0; break-after: page; break-inside: avoid; font-size: 11pt; }
   .bk-panel { min-height: 0; height: 100%; overflow: hidden; }
   .card-page:last-child .sheet:last-child { break-after: auto; }
-  @page { size: landscape; margin: 8mm; }
+  @page { size: landscape; margin: 6mm; }
 }
