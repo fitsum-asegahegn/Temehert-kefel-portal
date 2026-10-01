@@ -106,11 +106,42 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 .bk-verse.inside { margin-top: 9rem; }
 
 /* landscape PDF capture: JS sets the exact pixel size of each sheet */
-.pdf-sheet { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin: 0; background: #fff; }
+.pdf-sheet { display: grid; grid-template-columns: 1fr 1fr !important; gap: 30px; margin: 0; background: #fff; }
 .pdf-sheet .bk-panel { min-height: 0; height: 100%; overflow: hidden; font-size: 1.12rem; padding: 1.5rem 1.7rem; }
 .pdf-sheet .bk-table th, .pdf-sheet .bk-table td { height: 3.1rem; font-size: 1.1rem; }
+.pdf-sheet .bk-table.many th, .pdf-sheet .bk-table.many td { height: 2.05rem; font-size: .98rem; padding-top: 1px; padding-bottom: 1px; }
+.pdf-sheet .bk-sum { margin: .6rem 0 !important; padding: .6rem 1rem .6rem 2rem !important; }
 .pdf-sheet .bk-logo { width: 8rem; }
 .pdf-sheet .bk-emblems img { width: 9rem; }
+
+/* panel bodies: stacked on screen, side by side in the top-fold PDF */
+.bk-body { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+.bk-side { display: flex; flex-direction: column; flex: 1; }
+
+/* TOP-FOLD PDF: portrait page, two wide panels stacked; fold = the horizontal middle.
+   The outside page's top panel is rotated 180 degrees in JS so it reads right-side-up after folding. */
+.pdf-top { display: grid; grid-template-rows: 1fr 1fr; gap: 30px; background: #fff; }
+.pdf-top .bk-panel { min-height: 0; height: 100%; overflow: hidden; font-size: 17.5px; line-height: 1.5; padding: 22px 30px; border-radius: 26px; }
+.pdf-top .bk-panel h3 { font-size: 19px; margin: 6px 0 10px; }
+.pdf-top .bk-body { flex-direction: row; gap: 30px; }
+.pdf-top .bk-main, .pdf-top .bk-side { flex: 1; min-width: 0; }
+.pdf-top .wide-main .bk-main { flex: 1.7; }
+.pdf-top .bk-panel ul { margin-bottom: 10px; }
+.pdf-top .bk-panel li { margin-bottom: 4px; }
+.pdf-top .bk-logo { width: 130px; margin: 16px auto 0; }
+.pdf-top .bk-cover { margin: 4px 0 14px; font-size: 18px; }
+.pdf-top .bk-emblems { margin-bottom: 16px; }
+.pdf-top .bk-emblems img { width: 125px; }
+.pdf-top .bk-fields { line-height: 2.25; }
+.pdf-top .bk-table th, .pdf-top .bk-table td { height: 38px; font-size: 17px; padding: 2px 8px; }
+.pdf-top .bk-table th { font-size: 17px; }
+.pdf-top .bk-table.many th, .pdf-top .bk-table.many td { height: 31px; font-size: 15px; padding: 1px 8px; }
+.pdf-top .bk-sum { margin: 0 0 10px !important; padding: 12px 14px 12px 32px !important; font-size: 18px; }
+.pdf-top .bk-sign { padding-top: 26px; margin-top: auto; font-size: 13px; }
+.pdf-top .bk-photo { top: 22px; right: 30px; width: 112px; height: 126px; font-size: 12px; }
+.pdf-top .bk-verse.inside { margin: 20px 160px 0 0; font-size: 18px; }
+.pdf-top .bk-seal { padding: 70px 0 10px; font-size: 16px; }
+.pdf-top .bk-sign.single { margin-top: 28px; padding-top: 0; font-size: 14px; }
 
 /* credential slips: 8 per A4 page */
 .slips { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0; }
@@ -130,6 +161,7 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
   .card-page { display: contents; }
   .sheet { grid-template-columns: 1fr 1fr !important; gap: 8mm; height: 197mm; margin: 0; break-after: page; break-inside: avoid; font-size: 11pt; }
   .bk-panel { min-height: 0; height: 100%; overflow: hidden; }
+  .bk-table.many th, .bk-table.many td { height: 1.9rem; font-size: 10pt; padding-top: 1px; padding-bottom: 1px; }
   .card-page:last-child .sheet:last-child { break-after: auto; }
   @page { size: landscape; margin: 6mm; }
 }
