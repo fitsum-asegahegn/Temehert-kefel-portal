@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { supabase, fetchAll } from '../../lib/supabase.js'
 import { GRADES, gradeLabel } from '../../lib/grades.js'
 import { buildCard } from '../../lib/calc.js'
 import { useI18n } from '../../i18n.jsx'
 import ReportCard from '../../components/ReportCard.jsx'
+import PdfButton from '../../components/PdfButton.jsx'
 
 // Report cards for: every grade, one grade, or hand-picked students. Approved marks only.
 export default function CardsTab({ ctx }) {
@@ -17,6 +18,7 @@ export default function CardsTab({ ctx }) {
   const [cards, setCards] = useState(null)
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState('')
+  const cardsRef = useRef(null)
 
   useEffect(() => {
     fetchAll(() => supabase.from('students').select('id, full_name, code, grade, section').order('grade').order('full_name'))
@@ -86,6 +88,7 @@ export default function CardsTab({ ctx }) {
           <button className="btn" disabled={busy || (mode === 'selected' && !picked.size)} onClick={generate}>
             {busy ? t('loading') : (lang === 'am' ? 'ካርድ አውጣ' : 'Generate')}
           </button>
+          {cards && <PdfButton rootRef={cardsRef} name={`report-cards-${year}-${mode === 'grade' ? 'grade' + grade : mode}`} />}
           {cards && <button className="btn ghost" onClick={() => window.print()}>{t('print')} ({cards.length})</button>}
         </div>
         {msg && <p className="err" role="alert">{msg}</p>}
@@ -112,6 +115,7 @@ export default function CardsTab({ ctx }) {
         )}
       </div>
 
+      <div ref={cardsRef}>
       {cards?.map((c) => (
         <div className="card-page" key={c.student.id}>
           <ReportCard
@@ -120,6 +124,7 @@ export default function CardsTab({ ctx }) {
           />
         </div>
       ))}
+      </div>
     </>
   )
 }
