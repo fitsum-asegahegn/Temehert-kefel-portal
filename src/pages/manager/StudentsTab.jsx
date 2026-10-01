@@ -80,6 +80,27 @@ export default function StudentsTab({ ctx }) {
     setEdit(null); load()
   }
 
+  // Re-print the first passwords for everyone shown (or only the ticked students). Only students who have
+  // not yet changed their password still have one stored.
+  async function printSlips() {
+    setMsg({ text: '', bad: false }); setBusy(true)
+    try {
+      const rows = await fetchAll(() => supabase.from('initial_passwords').select('password, students!inner(id, full_name, code, grade, section, active)').eq('students.active', true))
+      const want = picked.size ? picked : new Set(shown.map((s) => s.id))
+      const items = rows.filter((r) => want.has(r.students.id))
+        .map((r) => ({ id: r.students.id, full_name: r.students.full_name, code: r.students.code, grade: r.students.grade, section: r.students.section, password: r.password }))
+        .sort((a, b) => a.grade - b.grade || a.section.localeCompare(b.section) || a.full_name.localeCompare(b.full_name))
+      const missing = want.size - items.length
+      if (!items.length) return setMsg({ text: lang === 'am' ? 'የተቀመጠ የመጀመሪያ የይለፍ ቃል የለም — ተማሪዎቹ ቀይረዋል ወይም ከዚህ በፊት የተፈጠሩ ናቸው። "የይለፍ ቃል ቀይር" ይጠቀሙ።' : 'No stored first passwords here — these students already changed theirs, or were created earlier. Use Reset password.', bad: true })
+      setSlips({
+        items, title: lang === 'am' ? 'የመግቢያ ወረቀቶች' : 'Sign-in slips',
+        note: (lang === 'am' ? 'የመጀመሪያ የይለፍ ቃል ተማሪው እስኪቀይረው ድረስ ብቻ ይቀመጣል።' : 'A first password is kept only until the student changes it.') +
+          (missing > 0 ? (lang === 'am' ? ` ${missing} ተማሪዎች አልተካተቱም (ቀይረዋል ወይም ተቀማጭ የለም)።` : ` ${missing} students are not included (already changed, or none stored).`) : ''),
+      })
+    } catch (e) { setMsg({ text: e.message, bad: true }) }
+    setBusy(false)
+  }
+
   async function reset(s) {
     if (!window.confirm(`${s.full_name} — ${lang === 'am' ? 'አዲስ የይለፍ ቃል ይፈጠር?' : 'Create a new password?'}`)) return
     try {
@@ -160,6 +181,9 @@ export default function StudentsTab({ ctx }) {
           </label>
           <label>🔍<input value={q} onChange={(e) => setQ(e.target.value)} /></label>
           <button className="btn ghost small" onClick={() => setPicked(new Set(shown.map((s) => s.id)))}>{lang === 'am' ? 'ሁሉንም ምረጥ' : 'Select all shown'}</button>
+          <button className="btn ghost small" disabled={busy || !shown.length} onClick={printSlips}>
+            {lang === 'am' ? `🖨 የመግቢያ ወረቀቶች (${picked.size || shown.length})` : `🖨 Print sign-in slips (${picked.size || shown.length})`}
+          </button>
           <button className="btn small" disabled={busy || !picked.size || gradeF === 0} onClick={promote}>
             {lang === 'am' ? `የተመረጡትን አሸጋግር (${picked.size})` : `Promote selected (${picked.size})`}
           </button>
