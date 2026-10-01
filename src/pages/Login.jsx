@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { supabase } from '../lib/supabase.js'
-import { normalizeCode, emailForCode } from '../lib/grades.js'
+import { normalizeCode, emailForCode, studentPassword } from '../lib/grades.js'
 import { useI18n } from '../i18n.jsx'
 
 export default function Login() {
@@ -18,7 +18,9 @@ export default function Login() {
     const code = normalizeCode(id)
     const email = id.includes('@') ? id.trim().toLowerCase() : code ? emailForCode(code) : null
     if (!email) { setBusy(false); return setErr(t('badLogin')) }
-    const { error } = await supabase.auth.signInWithPassword({ email, password: pw })
+    let { error } = await supabase.auth.signInWithPassword({ email, password: code ? studentPassword(pw.trim()) : pw })
+    // accounts made before the 4-digit PIN change still have their old full password
+    if (error && code) ({ error } = await supabase.auth.signInWithPassword({ email, password: pw }))
     setBusy(false)
     if (error) setErr(t('badLogin'))
   }
