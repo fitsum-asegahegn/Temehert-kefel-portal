@@ -18,6 +18,16 @@ export const CONDUCT = {
 
 // ID: FTS/27/#### — 27 is constant; the first character encodes the grade:
 // grades 3..12 -> digits 0..9, grade 1 -> A, grade 2 -> B. Last 3 digits stay for life.
+// Student passwords: at least 4 characters, any letters / numbers / symbols (the first one printed on the slip is 4 digits).
+// Supabase refuses passwords under 6 characters, so the app quietly adds a fixed ending before sending it.
+// Students only ever type their own password. Must match PIN_PAD in the Edge Function.
+export const PIN_PAD = import.meta.env?.VITE_PIN_PAD || 'fts-pin'
+export const studentPassword = (pw) => String(pw) + PIN_PAD
+export const MIN_STUDENT_PW = 4
+export const MAX_STUDENT_PW = 60 // keeps the padded password within Supabase's 72-byte limit
+export const isStudentPassword = (v) =>
+  v.length >= MIN_STUDENT_PW && v.length <= MAX_STUDENT_PW && !/^(.)\1+$/.test(v) && v !== '1234'
+
 export const SCHOOL = 'FTS'
 export const BATCH = '27'
 export const prefixFor = (g) => (g === 1 ? 'A' : g === 2 ? 'B' : String(g - 3))
