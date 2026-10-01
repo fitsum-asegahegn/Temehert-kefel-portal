@@ -51,11 +51,16 @@ page 2 = inside (subject scores out of 100, total, average + grade word, rank, s
 - Fixed wording lives in `src/lib/cardText.js` — edit once, every card changes.
 - Student extras used on the cover (Students → **Details**): ስም ከነ አያት, የክርስትና ስም, አጥቢያ, አድራሻ, ከተማ, ቀበሌ.
   Parish falls back to Users → Settings → Parish; school address is printed from Settings.
-- **Download PDF ⬇** (Report cards tab and the student's screen): always a **landscape, full-page** PDF (A4 or Letter),
-  one page per card side, so it does not depend on the phone's print dialog. For big groups do one grade at a time —
-  a PDF with hundreds of pages gets large on a phone.
-- **Print** (browser): uses landscape too, but Android's "Save as PDF" dialog can ignore it — then open its options (▾)
-  and set Orientation to Landscape. For duplex printing use **flip on short edge**. Print ONE card first and fold it to check alignment.
+- **Download PDF ⬇** (Report cards tab and the student's screen) — pick the fold style next to the button:
+  - **Book fold (default)** — landscape A4/Letter sheet, 2 pages per student, folded at the vertical middle →
+    the **closed card is PORTRAIT** (like the original template). Page 1 = outside (back cover left, front cover right),
+    page 2 = inside (marks left, photo/verse/signature/seal right).
+    Print **double-sided, flip on SHORT edge** (landscape), 100 %, then fold in the middle.
+  - **Top fold** — portrait sheet, folded across the middle → the closed card is LANDSCAPE; the back cover is printed upside down.
+  - **Inside page upside down** (checkbox): turn this on if, after a test print, the inside page comes out rotated 180°
+    (some printers/apps flip the back of the sheet the other way).
+  Choose A4 or Letter; for big groups do one grade at a time. The browser **Print** button exists only for the book fold.
+  Print ONE card first, fold it, and check that the cover and inside line up before printing a whole grade.
 - Student photo is a blank box to paste into (no photo upload yet).
 
 ## ዕቅድ (plan) tab — members & admins
