@@ -92,5 +92,24 @@ Database: fresh install = `schema.sql`; otherwise run `supabase/migration-003.sq
   members/admins can reach all. Fresh install = `schema.sql`; otherwise run `supabase/migration-004.sql` once.
 - Students who already have accounts are asked for a photo the next time they sign in.
 
+## Student passwords (minimum 4 characters)
+- A student's first password (on the printed slip) is a random **4-digit** number. At first login they choose their own:
+  **at least 4 characters, any letters (Latin or Amharic), numbers or symbols**, and they can make it longer (up to 60).
+  Not allowed: all the same character (0000, aaaa) or 1234. Staff (teachers, members, admins) keep strong 8+ character passwords.
+- Supabase will not accept passwords shorter than 6, so the app silently adds a fixed ending (`fts-pin`) before sending it —
+  students only ever type their own password. The Edge Function and the web app must use the same ending (default is fine;
+  only change both together via `PIN_PAD` / `VITE_PIN_PAD`).
+- Students created earlier with long passwords can still sign in; they move to the new scheme when they change or reset it.
+- Security note: a 4-character password is easy to guess. Supabase rate-limits sign-in attempts, but anyone who knows a
+  student's ID could keep trying — encourage longer passwords, and use Reset password if a child shares theirs.
+
+## Print all sign-in slips for a grade
+Students tab → pick a grade (or tick some students) → **🖨 Print sign-in slips**. You get every student's ID + first password,
+8 slips per A4/Letter page (a page break between grades), straight from the database — no need to print right after creating them.
+- The **first** password is stored (visible to members/admins only) **until the student changes it**; at that moment it is
+  deleted automatically. Students who already changed theirs, or were created before this feature, are skipped and counted in the note —
+  use **Reset password** to get a new slip for them.
+- Fresh install = `schema.sql`; otherwise run `supabase/migration-005.sql` once and redeploy the Edge Function.
+
 ## Not built yet
 Plan completion inside the Word/PowerPoint reports.
