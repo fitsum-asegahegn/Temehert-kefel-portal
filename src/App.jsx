@@ -52,7 +52,7 @@ function Root() {
   if (!configured) return <div className="login"><div className="panel err">{t('notConfigured')}</div></div>
   if (session === undefined || (session && !me)) return <div className="login muted">{t('loading')}</div>
   if (!session) return <><Login /><p className="muted" style={{ textAlign: 'center' }}>{VERSION}</p></>
-  if (me.mustChange) return <ChangePassword uid={uid} onDone={() => setMe({ ...me, mustChange: false })} />
+  if (me.mustChange) return <ChangePassword uid={uid} role={me.role} onDone={() => setMe({ ...me, mustChange: false })} />
 
   // A student must add a photo (it is printed on the report card) before seeing anything else.
   if (me.role === 'student' && !me.hasPhoto) {
