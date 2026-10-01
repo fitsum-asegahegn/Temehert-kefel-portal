@@ -5,7 +5,9 @@ import { gradeLabel } from '../lib/grades.js'
 import { useI18n } from '../i18n.jsx'
 import ReportCard from '../components/ReportCard.jsx'
 import CourseModal from '../components/CourseModal.jsx'
-import PdfButton from '../components/PdfButton.jsx'
+import PdfButton, { useCardLayout } from '../components/PdfButton.jsx'
+import PhotoUpload from '../components/PhotoUpload.jsx'
+import { photoUrl } from '../lib/photos.js'
 
 export default function StudentHome({ ctx }) {
   const { t, lang } = useI18n()
@@ -13,6 +15,10 @@ export default function StudentHome({ ctx }) {
   const [data, setData] = useState(null)
   const [err, setErr] = useState('')
   const cardRef = useRef(null)
+  const [photo, setPhoto] = useState({ path: null, url: null })
+  const [changing, setChanging] = useState(false)
+  const [flash, setFlash] = useState('')
+  const [layout, setLayout] = useCardLayout()
   const [open, setOpen] = useState(null) // subject whose breakdown is showing
 
   useEffect(() => {
@@ -49,6 +55,13 @@ export default function StudentHome({ ctx }) {
     return () => { off = true }
   }, [year])
 
+  useEffect(() => {
+    if (!data?.student?.photo_path) return
+    let off = false
+    photoUrl(data.student.photo_path).then((url) => { if (!off) setPhoto({ path: data.student.photo_path, url }) })
+    return () => { off = true }
+  }, [data?.student?.photo_path])
+
   if (err) return <p className="err">{err}</p>
   if (!data) return <p className="muted">{t('loading')}</p>
   const { student, card, ranks } = data
@@ -62,14 +75,29 @@ export default function StudentHome({ ctx }) {
   return (
     <>
       {open && <CourseModal subject={open} terms={termsFor(open)} onClose={() => setOpen(null)} />}
+      <div className="panel no-print">
+        {changing ? (
+          <PhotoUpload targetId={ctx.uid} self currentUrl={photo.url} oldPath={photo.path}
+            onCancel={() => setChanging(false)}
+            onDone={(path) => { setChanging(false); setFlash(t('photoSaved')); photoUrl(path).then((url) => setPhoto({ path, url })) }} />
+        ) : (
+          <div className="row" style={{ marginBottom: 0 }}>
+            <div style={{ width: 56, height: 63, borderRadius: 10, overflow: 'hidden', border: '2px solid #f79646', background: 'var(--paper)' }}>
+              {photo.url && <img src={photo.url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
+            </div>
+            <button className="btn ghost small" onClick={() => { setFlash(''); setChanging(true) }}>{t('photoChange')}</button>
+            {flash && <span className="ok" role="status">{flash}</span>}
+          </div>
+        )}
+      </div>
       <div className="row no-print">
         <label>{t('year')}
           <select value={year} onChange={(e) => setYear(Number(e.target.value))}>
             {data.years.map((y) => <option key={y} value={y}>{y}</option>)}
           </select>
         </label>
-        {card.rows.length > 0 && <PdfButton rootRef={cardRef} name={`report-card-${year}`} />}
-        {card.rows.length > 0 && <button className="btn ghost" onClick={() => window.print()}>{t('print')}</button>}
+        {card.rows.length > 0 && <PdfButton rootRef={cardRef} layout={layout} setLayout={setLayout} name={`report-card-${year}`} />}
+        {card.rows.length > 0 && layout === 'side' && <button className="btn ghost" onClick={() => window.print()}>{t('print')}</button>}
       </div>
 
       {card.rows.length === 0 ? (
@@ -95,7 +123,7 @@ export default function StudentHome({ ctx }) {
           <div className="card-page" ref={cardRef}>
             <ReportCard
               student={student} year={year} gradeText={gradeLabel(data.gradeAtYear, lang)}
-              card={card} ranks={ranks} cfg={ctx.settings}
+              card={card} ranks={ranks} cfg={ctx.settings} photoUrl={photo.url}
             />
           </div>
         </>
