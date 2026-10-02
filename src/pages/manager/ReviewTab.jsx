@@ -50,7 +50,7 @@ export default function ReviewTab({ ctx }) {
       </div>
       {msg.text && <p className={msg.bad ? 'err' : 'ok'} role="status">{msg.text}</p>}
 
-      {subjects.map((s) => {
+      {subjects.filter((s) => !s.term || s.term === term).map((s) => {
         const list = marks.filter((m) => m.subject_id === s.id)
         const n = (st) => list.filter((m) => m.status === st).length
         return (
