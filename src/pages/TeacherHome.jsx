@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase.js'
 import { gradeLabel } from '../lib/grades.js'
+import { runOps } from '../lib/sync.js'
+import { pendingFor } from '../lib/queue.js'
 import { useI18n } from '../i18n.jsx'
 
 let keyN = 0
@@ -20,6 +22,7 @@ export default function TeacherHome({ ctx }) {
   const [scores, setScores] = useState({})    // `${studentId}|${assessmentId}` -> text
   const [saved, setSaved] = useState({})      // same key -> true when it exists in the database
   const [marks, setMarks] = useState({})      // studentId -> marks row
+  const [pendingIds, setPendingIds] = useState(new Set()) // students whose latest save is still waiting for internet
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState({ text: '', bad: false })
 
@@ -54,10 +57,15 @@ export default function TeacherHome({ ctx }) {
     if (sc.error) return bad(sc.error.message)
 
     setStudents(st.data)
-    setMarks(Object.fromEntries(mk.data.map((m) => [m.student_id, m])))
     setDefs(as.data)
     const text = {}, exists = {}
     for (const r of sc.data) { text[`${r.student_id}|${r.assessment_id}`] = String(r.score); exists[`${r.student_id}|${r.assessment_id}`] = true }
+    // changes saved on this phone but not uploaded yet are shown on top of the saved copy
+    const ov = pendingFor(ctx.uid, { assessmentIds: ids, subjectId: sel.subject.id, year: ctx.year, term })
+    for (const [k, v] of Object.entries(ov.scores)) { if (v === null) delete text[k]; else text[k] = v }
+    const markMap = Object.fromEntries(mk.data.map((m) => [m.student_id, m]))
+    for (const [sid, status] of Object.entries(ov.marks)) markMap[sid] = { ...(markMap[sid] || {}), student_id: sid, status }
+    setMarks(markMap); setPendingIds(new Set(Object.keys(ov.marks)))
     setScores(text); setSaved(exists)
     if (as.data.length) {
       setDraft(as.data.map((a) => ({ key: newKey(), id: a.id, name: a.name, max: String(a.max_points) })))
@@ -68,6 +76,11 @@ export default function TeacherHome({ ctx }) {
     }
   }
   useEffect(() => { load() }, [sel, term])
+  // when the phone uploads the waiting changes, refresh from the server
+  useEffect(() => {
+    window.addEventListener('fts-synced', load)
+    return () => window.removeEventListener('fts-synced', load)
+  }, [sel, term])
 
   // ---- define the columns (any number of rows, adding up to the subject's maximum) ----
   const draftSum = draft.reduce((s, r) => s + (num(r.max) || 0), 0)
@@ -124,10 +137,14 @@ export default function TeacherHome({ ctx }) {
     if (!mk.length && !del.length) return bad('—')
     setBusy(true)
     try {
-      if (up.length) { const { error } = await supabase.from('assessment_scores').upsert(up, { onConflict: 'assessment_id,student_id' }); if (error) throw error }
-      for (const [aid, sid] of del) { const { error } = await supabase.from('assessment_scores').delete().eq('assessment_id', aid).eq('student_id', sid); if (error) throw error }
-      if (mk.length) { const { error } = await supabase.from('marks').upsert(mk, { onConflict: 'student_id,subject_id,year,term' }); if (error) throw error }
-      ok(status === 'submitted' ? t('st_submitted') + ' ✓' : t('st_draft') + ' ✓')
+      const ops = [
+        ...up.map((row) => ({ t: 'upsert', table: 'assessment_scores', row, onConflict: 'assessment_id,student_id' })),
+        ...del.map(([aid, sid]) => ({ t: 'delete', table: 'assessment_scores', match: { assessment_id: aid, student_id: sid } })),
+        ...mk.map((row) => ({ t: 'upsert', table: 'marks', row, onConflict: 'student_id,subject_id,year,term' })),
+      ]
+      const res = await runOps(ctx.uid, ops) // no internet? kept on the phone and uploaded later
+      if (res.queued) ok(lang === 'am' ? 'በዚህ ስልክ ላይ ተቀምጧል — ኢንተርኔት ሲኖር ይላካል ✓' : 'Saved on this phone — it will upload when you are online ✓')
+      else ok(status === 'submitted' ? t('st_submitted') + ' ✓' : t('st_draft') + ' ✓')
       await load()
     } catch (e) { bad(e.message) }
     setBusy(false)
@@ -212,7 +229,7 @@ export default function TeacherHome({ ctx }) {
                         </td>
                       ))}
                       <td className="num"><strong>{totalOf(s.id)}</strong></td>
-                      <td>{st ? <span className={'pill ' + st}>{t('st_' + st)}</span> : <span className="muted">{t('st_missing')}</span>}</td>
+                      <td>{pendingIds.has(s.id) ? <span className="pill">⏳ {lang === 'am' ? 'ይላካል' : 'waiting'}</span> : st ? <span className={'pill ' + st}>{t('st_' + st)}</span> : <span className="muted">{t('st_missing')}</span>}</td>
                     </tr>
                   )
                 })}
