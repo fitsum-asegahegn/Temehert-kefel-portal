@@ -111,5 +111,15 @@ Students tab → pick a grade (or tick some students) → **🖨 Print sign-in s
   use **Reset password** to get a new slip for them.
 - Fresh install = `schema.sql`; otherwise run `supabase/migration-005.sql` once and redeploy the Edge Function.
 
+## One course = one semester
+- Every course belongs to **one semester** (Subjects tab → choose Semester 1 or 2 when adding it; old courses show "—" until you set it).
+  In the second semester, add the new courses and assign teachers to them.
+- Teachers see the semester next to each course and can only enter marks in that semester (the database enforces it).
+- The card shows every course once. **Yearly average = mean of all the year's courses**, total = their sum, rank follows the average.
+  (A semester view/report still averages just that semester's courses.)
+- A student's year shows "Incomplete" until both semesters have some approved marks.
+- Fresh install = `schema.sql`; otherwise run `supabase/migration-006.sql` once. Existing courses keep working (they can be used in either
+  semester) until you set their semester.
+
 ## Not built yet
 Plan completion inside the Word/PowerPoint reports.
