@@ -121,5 +121,19 @@ Students tab → pick a grade (or tick some students) → **🖨 Print sign-in s
 - Fresh install = `schema.sql`; otherwise run `supabase/migration-006.sql` once. Existing courses keep working (they can be used in either
   semester) until you set their semester.
 
+## Offline use
+- **Open before, view later:** anything a person has opened while online (results, card, marks lists, photos, plan...) is saved on their
+  phone and shown again with no internet, with a yellow "You are offline — showing the last saved copy" strip. The app itself,
+  the Ethiopic fonts and the PDF/Word/Excel tools are saved too. Each person has their own saved copy; it is **deleted on sign-out**.
+- **Teachers can enter marks offline:** scores, drafts and "submit" are kept on the phone ("⏳ waiting") and upload automatically when
+  internet returns (also when the app is opened again, or tap **Upload now**). If a course was approved in the meantime the server refuses
+  that change and the strip shows a warning — approved marks never change by accident.
+- **Needs internet (shows a clear message instead):** first sign-in, changing password, uploading/changing a photo, creating accounts,
+  resets, promotions, approving marks, editing the assessment rows, subjects, plan, settings. Those are not queued on purpose
+  (they depend on live data or the server).
+- Signing out with unsent changes asks first; the changes stay on the phone and upload the next time that person signs in.
+- First-time rule: a page must have been opened once while online to be available offline.
+- No database change for this version.
+
 ## Not built yet
 Plan completion inside the Word/PowerPoint reports.
