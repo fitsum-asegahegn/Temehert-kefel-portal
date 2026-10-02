@@ -27,12 +27,12 @@ export default function TeacherHome({ ctx }) {
   const ok = (text) => setMsg({ text, bad: false })
 
   useEffect(() => {
-    supabase.from('teacher_assignments').select('grade, subjects(id, name_am, name_en, max_score)')
+    supabase.from('teacher_assignments').select('grade, subjects(id, name_am, name_en, max_score, term)')
       .eq('teacher_id', ctx.uid).order('grade').then(({ data, error }) => {
         if (error) return bad(error.message)
         const list = data.map((a) => ({ grade: a.grade, subject: a.subjects }))
         setAsg(list)
-        if (list.length) setSel(list[0])
+        if (list.length) { setSel(list[0]); if (list[0].subject.term) setTerm(list[0].subject.term) }
       })
   }, [])
 
@@ -142,15 +142,19 @@ export default function TeacherHome({ ctx }) {
     <>
       <div className="row">
         <label>{t('subject')}
-          <select value={asg.indexOf(sel)} onChange={(e) => setSel(asg[Number(e.target.value)])}>
-            {asg.map((a, i) => <option key={i} value={i}>{name(a.subject)} · {gradeLabel(a.grade, lang)}</option>)}
+          <select value={asg.indexOf(sel)} onChange={(e) => { const a = asg[Number(e.target.value)]; setSel(a); if (a.subject.term) setTerm(a.subject.term) }}>
+            {asg.map((a, i) => <option key={i} value={i}>{name(a.subject)} · {gradeLabel(a.grade, lang)}{a.subject.term ? ` · ${t('term' + a.subject.term)}` : ''}</option>)}
           </select>
         </label>
-        <label>{t('term')}
-          <select value={term} onChange={(e) => setTerm(Number(e.target.value))}>
-            <option value={1}>{t('term1')}</option><option value={2}>{t('term2')}</option>
-          </select>
-        </label>
+        {sel.subject.term ? (
+          <div className="muted">{t('term' + sel.subject.term)}</div> // this course is taught in one semester only
+        ) : (
+          <label>{t('term')}
+            <select value={term} onChange={(e) => setTerm(Number(e.target.value))}>
+              <option value={1}>{t('term1')}</option><option value={2}>{t('term2')}</option>
+            </select>
+          </label>
+        )}
         <div className="muted">{t('year')} {ctx.year} · {t('outOf')} {maxScore}</div>
       </div>
 

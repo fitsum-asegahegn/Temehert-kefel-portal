@@ -110,11 +110,14 @@ export default function StudentHome({ ctx }) {
           </div>
           <div className="panel scroll no-print">
             <table>
-              <thead><tr><th>{t('subject')}</th><th className="num">{t('term1')}</th><th className="num">{t('term2')}</th><th className="num">{t('average')} %</th></tr></thead>
+              <thead><tr><th>{t('subject')}</th><th>{t('term')}</th><th className="num">{lang === 'am' ? 'ውጤት ከ 100' : 'Mark / 100'}</th></tr></thead>
               <tbody>
                 {card.rows.map((r) => (
-                  <tr key={r.subject.id}><td><button className="link" onClick={() => setOpen(r.subject)}>{lang === 'en' && r.subject.name_en ? r.subject.name_en : r.subject.name_am}</button></td>
-                    <td className="num">{r.t1 ?? '—'} / {r.max}</td><td className="num">{r.t2 ?? '—'} / {r.max}</td><td className="num">{r.avg ?? '—'}</td></tr>
+                  <tr key={r.subject.id}>
+                    <td><button className="link" onClick={() => setOpen(r.subject)}>{lang === 'en' && r.subject.name_en ? r.subject.name_en : r.subject.name_am}</button></td>
+                    <td>{[r.t1 != null && 1, r.t2 != null && 2].filter(Boolean).join(' · ')}</td>
+                    <td className="num">{r.avg ?? '—'}</td>
+                  </tr>
                 ))}
               </tbody>
             </table>
