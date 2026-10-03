@@ -154,5 +154,20 @@ Students tab → pick a grade (or tick some students) → **🖨 Print sign-in s
 - **My results:** yearly average and rank, each course with its semester and mark out of 100, and a tap on a course shows its
   assessment breakdown. Results appear only after a member approves the marks.
 
+## Past years after promotion (v0.17)
+- Promotion changes the student's grade and ID, but every mark keeps the grade/section it was entered in, and stays linked to the student's
+  hidden account id — so nothing is lost.
+- On their results screen a student picks a **Year** and a **Semester** (Yearly / Semester 1 / Semester 2): average, rank and the course list
+  follow that choice, and a line shows the grade they were in that year ("previous grade" if different from today).
+- Right after a new year starts (nothing approved yet for it), the screen opens on the latest year that has results.
+- Rank for an old year is the rank in the grade/section they were in at that time. No database change.
+
+## Deleting users (admin only)
+- **Students:** Students tab → tick students → **🗑 Delete selected** (shown only to admins). **Staff (teachers / members):** Users tab → **Delete**.
+- Type `DELETE` to confirm. It is permanent: the sign-in, the student record, marks, assessment scores, photo, teacher assignments are removed
+  (marks a deleted teacher entered stay, just without a name). Great for clearing test accounts.
+- Safety: only admins can do it; you cannot delete yourself; an admin account must first be changed to another role in the Users tab.
+- Needs the Edge Function redeployed (your GitHub workflow does it on push). No database change.
+
 ## Not built yet
 Plan completion inside the Word/PowerPoint reports.
