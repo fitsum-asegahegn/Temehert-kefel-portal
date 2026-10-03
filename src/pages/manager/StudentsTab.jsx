@@ -101,6 +101,24 @@ export default function StudentsTab({ ctx }) {
     setBusy(false)
   }
 
+  // Admin only. Permanent: removes the student, their marks, photo and sign-in. Used to clean out test students.
+  async function removeSelected() {
+    const list = shown.filter((s) => picked.has(s.id))
+    if (!list.length) return
+    const names = list.slice(0, 5).map((s) => s.full_name).join('، ') + (list.length > 5 ? ` +${list.length - 5}` : '')
+    const ask = lang === 'am'
+      ? `${list.length} ተማሪዎች ለዘላለም ይሰረዛሉ (ውጤታቸውና ፎቶአቸውም ጭምር)፦\n${names}\n\nለማረጋገጥ DELETE ብለው ይጻፉ።`
+      : `Permanently delete ${list.length} student(s), including their marks and photo:\n${names}\n\nType DELETE to confirm.`
+    if (window.prompt(ask) !== 'DELETE') return
+    setBusy(true)
+    try {
+      const r = await manage('delete_users', { user_ids: list.map((s) => s.id) })
+      setMsg({ text: `✓ ${r.deleted.length}` + (r.errors.length ? ' · ' + r.errors.map((x) => x.error).join(' | ') : ''), bad: r.errors.length > 0 })
+      setPicked(new Set()); load()
+    } catch (e) { setMsg({ text: e.message, bad: true }) }
+    setBusy(false)
+  }
+
   async function reset(s) {
     if (!window.confirm(`${s.full_name} — ${lang === 'am' ? 'አዲስ የይለፍ ቃል ይፈጠር?' : 'Create a new password?'}`)) return
     try {
@@ -184,6 +202,11 @@ export default function StudentsTab({ ctx }) {
           <button className="btn ghost small" disabled={busy || !shown.length} onClick={printSlips}>
             {lang === 'am' ? `🖨 የመግቢያ ወረቀቶች (${picked.size || shown.length})` : `🖨 Print sign-in slips (${picked.size || shown.length})`}
           </button>
+          {ctx.me.role === 'admin' && (
+            <button className="btn danger small" disabled={busy || !picked.size} onClick={removeSelected}>
+              {lang === 'am' ? `🗑 የተመረጡትን ሰርዝ (${picked.size})` : `🗑 Delete selected (${picked.size})`}
+            </button>
+          )}
           <button className="btn small" disabled={busy || !picked.size || gradeF === 0} onClick={promote}>
             {lang === 'am' ? `የተመረጡትን አሸጋግር (${picked.size})` : `Promote selected (${picked.size})`}
           </button>

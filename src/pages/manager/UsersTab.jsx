@@ -35,6 +35,19 @@ export default function UsersTab({ ctx }) {
     if (!window.confirm(u.name)) return
     try { const r = await manage('reset_password', { user_id: u.id }); setCred({ full_name: u.name, email: u.email, password: r.password }) } catch (e) { fail(e) }
   }
+  // Admin only (this whole tab is). Permanent. Admins must be changed to another role first.
+  async function remove(u) {
+    const ask = lang === 'am'
+      ? `${u.name} ለዘላለም ይሰረዛል። ለማረጋገጥ DELETE ብለው ይጻፉ።`
+      : `Permanently delete ${u.name}. Type DELETE to confirm.`
+    if (window.prompt(ask) !== 'DELETE') return
+    try {
+      const r = await manage('delete_users', { user_ids: [u.id] })
+      if (r.errors.length) return fail(new Error(r.errors[0].error))
+      setMsg({ text: '✓', bad: false }); load()
+    } catch (e) { fail(e) }
+  }
+
   async function create(e) {
     e.preventDefault()
     try { const r = await manage('create_staff', nf); setCred(r.user); setNf({ full_name: '', email: '', role: 'member' }); load() } catch (e2) { fail(e2) }
@@ -89,7 +102,8 @@ export default function UsersTab({ ctx }) {
                     {ROLES.map((r) => <option key={r} value={r}>{t('role_' + r)}</option>)}
                   </select>
                 </td>
-                <td><button className="btn ghost small" onClick={() => reset(u)}>{lang === 'am' ? 'የይለፍ ቃል ቀይር' : 'Reset password'}</button></td>
+                <td><button className="btn ghost small" onClick={() => reset(u)}>{lang === 'am' ? 'የይለፍ ቃል ቀይር' : 'Reset password'}</button>
+                  {u.role !== 'admin' && u.id !== ctx.uid && <> <button className="btn danger small" onClick={() => remove(u)}>{t('delete')}</button></>}</td>
               </tr>
             ))}
           </tbody>
