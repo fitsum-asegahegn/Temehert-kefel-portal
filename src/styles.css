@@ -32,6 +32,10 @@ main { max-width: 980px; margin: 0 auto; padding: 1rem 1rem calc(5rem + env(safe
 .tabs button { flex: none; background: transparent; border: 0; border-bottom: 3px solid transparent; padding: .5rem .8rem; cursor: pointer; color: var(--muted); }
 .tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--rubric); font-weight: 600; }
 
+.statusbar { background: #fff3cd; border-bottom: 1px solid #e0c36a; padding: .45rem 1rem; font-size: .85rem; color: #5b4a00; }
+.statusbar > div + div { margin-top: .25rem; }
+.statusbar .err { color: var(--rubric); }
+
 /* surfaces */
 .panel { background: var(--card); border: 1px solid var(--line); border-radius: 6px; padding: 1rem; margin-bottom: 1rem; }
 .row { display: flex; flex-wrap: wrap; gap: .75rem; align-items: end; margin-bottom: .75rem; }
