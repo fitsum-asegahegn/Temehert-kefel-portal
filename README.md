@@ -145,5 +145,14 @@ Students tab → pick a grade (or tick some students) → **🖨 Print sign-in s
   Approved marks only, unless you tick "Include marks not approved yet". For the current year, students with no marks yet are listed too.
 - No database change.
 
+## What students see (v0.16)
+- **No report card for students.** They cannot see, preview, download or print the printed card — members/admins generate it
+  (Report cards tab).
+- **My profile (read-only text):** photo, full name, ID, grade, section, Christian name, parish, address, city, kebele, guardian name/phone.
+  Only members/admins can edit these (Students → Details); the database blocks students from editing their row.
+  The one thing a student can change is their **own photo**.
+- **My results:** yearly average and rank, each course with its semester and mark out of 100, and a tap on a course shows its
+  assessment breakdown. Results appear only after a member approves the marks.
+
 ## Not built yet
 Plan completion inside the Word/PowerPoint reports.
