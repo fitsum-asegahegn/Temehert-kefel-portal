@@ -162,6 +162,34 @@ Deno.serve(async (req) => {
       return json({ results, errors })
     }
 
+    // ---- delete_users: {user_ids: []}  ADMIN ONLY. Removes the account and everything tied to it
+    //      (student record, marks, assessment scores, photo, teacher assignments...). Cannot be undone.
+    if (body.action === 'delete_users') {
+      if (callerRole !== 'admin') return json({ error: 'Only an admin can delete users' }, 403)
+      const ids = body.user_ids as string[]
+      if (!Array.isArray(ids) || !ids.length) return json({ error: 'No users given' }, 400)
+      if (ids.length > 200) return json({ error: 'Delete at most 200 at a time' }, 400)
+      const deleted: string[] = []
+      const errors: any[] = []
+      for (const id of ids) {
+        if (id === user.id) { errors.push({ id, error: 'You cannot delete your own account' }); continue }
+        const { data: target } = await admin.from('user_roles').select('role').eq('user_id', id).maybeSingle()
+        if (target?.role === 'admin') { errors.push({ id, error: 'Change this admin to another role first, then delete' }); continue }
+        try {
+          // photo files (students)
+          const { data: files } = await admin.storage.from('student-photos').list(id)
+          if (files?.length) await admin.storage.from('student-photos').remove(files.map((f) => `${id}/${f.name}`))
+        } catch { /* no photos */ }
+        // these two columns point at users without cascading; clear them so the delete is not blocked
+        await admin.from('marks').update({ entered_by: null }).eq('entered_by', id)
+        await admin.from('plan_log').update({ by: null }).eq('by', id)
+        const { error } = await admin.auth.admin.deleteUser(id)
+        if (error) errors.push({ id, error: error.message })
+        else deleted.push(id)
+      }
+      return json({ deleted, errors })
+    }
+
     return json({ error: 'Unknown action' }, 400)
   } catch (e) {
     return json({ error: (e as Error).message }, 500)
