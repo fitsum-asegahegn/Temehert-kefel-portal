@@ -135,5 +135,15 @@ Students tab → pick a grade (or tick some students) → **🖨 Print sign-in s
 - First-time rule: a page must have been opened once while online to be available offline.
 - No database change for this version.
 
+## Rosters (view + Excel)
+- **Teachers** — on a course's marks screen: the grid now also shows **Average %**, and **Roster Excel ⬇** downloads
+  `Student name | each assessment (mid, final, ...) | Total | Average %` plus a "Class average" row. It exports what is on screen,
+  so it also works offline.
+- **Members/admins** — tab **Rosters**: pick year, grade and Yearly / Semester 1 / Semester 2 → a table of every student in that grade,
+  **one column per course** (each out of 100), then **Total, Average %, Rank**. Order by name or rank, and download as Excel.
+  Same maths as the report card (each course once; average = mean of the student's courses; rank within the section, ties share).
+  Approved marks only, unless you tick "Include marks not approved yet". For the current year, students with no marks yet are listed too.
+- No database change.
+
 ## Not built yet
 Plan completion inside the Word/PowerPoint reports.
