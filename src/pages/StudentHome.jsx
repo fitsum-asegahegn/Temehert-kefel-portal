@@ -78,12 +78,12 @@ export default function StudentHome({ ctx }) {
   }).filter(Boolean)
 
   const fields = [
-    [am ? 'ሙሉ ስም ከነ አያት' : 'Full name', student.full_name],
+    [am ? 'ሙሉ ስም ከነ አያት' : 'Full name', student.full_name, true],
     [am ? 'መታወቂያ' : 'Student ID', student.code],
     [t('grade'), gradeLabel(student.grade, lang)],
     [t('section'), student.section],
     [am ? 'የክርስትና ስም' : 'Christian name', student.christian_name],
-    [am ? 'አጥቢያ' : 'Parish', student.parish],
+    [am ? 'አጥቢያ' : 'Parish', student.parish, true],
     [am ? 'አድራሻ' : 'Address', student.address],
     [am ? 'ከተማ' : 'City', student.city],
     [am ? 'ቀበሌ' : 'Kebele', student.kebele],
@@ -103,8 +103,8 @@ export default function StudentHome({ ctx }) {
             {photo.url ? <img src={photo.url} alt="" /> : <span className="muted">{t('photoNone')}</span>}
           </div>
           <dl className="profile-fields">
-            {fields.map(([k, v]) => (
-              <div key={k}><dt>{k}</dt><dd>{v || '—'}</dd></div>
+            {fields.map(([k, v, wide]) => (
+              <div key={k} className={wide ? 'wide' : undefined}><dt>{k}</dt><dd>{v || '—'}</dd></div>
             ))}
           </dl>
         </div>
