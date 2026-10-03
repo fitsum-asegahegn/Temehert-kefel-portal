@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase.js'
 import { gradeLabel } from '../lib/grades.js'
 import { runOps } from '../lib/sync.js'
 import { pendingFor } from '../lib/queue.js'
+import { downloadSheet, safeName } from '../lib/rosterExcel.js'
 import { useI18n } from '../i18n.jsx'
 
 let keyN = 0
@@ -116,6 +117,22 @@ export default function TeacherHome({ ctx }) {
   // ---- enter scores ----
   const key = (sid, aid) => `${sid}|${aid}`
   const totalOf = (sid) => round2(defs.reduce((s, a) => s + (num(scores[key(sid, a.id)]) || 0), 0))
+  const hasAny = (sid) => defs.some((a) => (scores[key(sid, a.id)] ?? '') !== '')
+  const avgOf = (sid) => (hasAny(sid) ? round2((totalOf(sid) / maxScore) * 100) : null)
+
+  // Roster for this course: student name, each assessment, total, average % (what is on the screen now)
+  function downloadRoster() {
+    const mean = (vals) => { const v = vals.filter((x) => x != null); return v.length ? round2(v.reduce((a, b) => a + b, 0) / v.length) : null }
+    const rows = students.map((s) => [s.full_name, ...defs.map((a) => { const v = num(scores[key(s.id, a.id)]); return Number.isNaN(v) ? null : v }), hasAny(s.id) ? totalOf(s.id) : null, avgOf(s.id)])
+    const cols = (rows[0] || []).length
+    const classRow = [lang === 'am' ? 'የክፍሉ አማካይ' : 'Class average', ...Array.from({ length: cols - 1 }, (_, i) => mean(rows.map((r) => r[i + 1])))]
+    downloadSheet({
+      sheet: `${name(sel.subject)} ${gradeLabel(sel.grade, lang)}`,
+      header: [lang === 'am' ? 'የተማሪ ስም' : 'Student name', ...defs.map((a) => `${a.name} (${a.max_points})`), t('total'), `${t('average')} %`],
+      rows: [...rows, classRow],
+      filename: `roster-g${sel.grade}-S${term}-${safeName(sel.subject.name_en || 'course' + sel.subject.id)}.xlsx`,
+    }).catch((e) => bad(e.message))
+  }
 
   async function saveScores(status) {
     const up = [], del = [], mk = []
@@ -212,7 +229,7 @@ export default function TeacherHome({ ctx }) {
                 <tr>
                   <th>{t('student')}</th>
                   {defs.map((a) => <th className="num" key={a.id}>{a.name}<div className="muted">/ {a.max_points}</div></th>)}
-                  <th className="num">{t('total')}</th><th>{t('status')}</th>
+                  <th className="num">{t('total')}</th><th className="num">{t('average')} %</th><th>{t('status')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -229,6 +246,7 @@ export default function TeacherHome({ ctx }) {
                         </td>
                       ))}
                       <td className="num"><strong>{totalOf(s.id)}</strong></td>
+                      <td className="num">{avgOf(s.id) ?? ''}</td>
                       <td>{pendingIds.has(s.id) ? <span className="pill">⏳ {lang === 'am' ? 'ይላካል' : 'waiting'}</span> : st ? <span className={'pill ' + st}>{t('st_' + st)}</span> : <span className="muted">{t('st_missing')}</span>}</td>
                     </tr>
                   )
@@ -240,6 +258,7 @@ export default function TeacherHome({ ctx }) {
           <div className="row">
             <button className="btn ghost" disabled={busy} onClick={() => saveScores('draft')}>{t('save')}</button>
             <button className="btn" disabled={busy} onClick={() => saveScores('submitted')}>{lang === 'am' ? 'ለግምገማ አስገባ' : 'Submit for review'}</button>
+            <button className="btn ghost" onClick={downloadRoster} disabled={!students.length}>{lang === 'am' ? 'ዝርዝር Excel ⬇' : 'Roster Excel ⬇'}</button>
           </div>
         </>
       )}
