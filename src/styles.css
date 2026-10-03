@@ -79,6 +79,13 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 .profile-fields { flex: 1; min-width: 14rem; margin: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr)); gap: .5rem 1.25rem; }
 .profile-fields dt { color: var(--muted); font-size: .8rem; }
 .profile-fields dd { margin: 0; font-weight: 600; overflow-wrap: anywhere; }
+/* phones: always two columns; long values (full name, parish) take the whole row */
+@media (max-width: 600px) {
+  .profile-photo { width: 84px; height: 95px; }
+  .profile-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .55rem .9rem; min-width: 0; flex: 1 1 100%; }
+  .profile-fields .wide { grid-column: 1 / -1; }
+  .profile-fields dd { font-size: .95rem; }
+}
 
 /* course result popup */
 .link { background: none; border: 0; padding: 0; color: #0b63ce; text-decoration: underline; cursor: pointer; text-align: left; font: inherit; }
