@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase.js'
 import { buildCard } from '../lib/calc.js'
 import { gradeLabel } from '../lib/grades.js'
+import { scopeName } from '../lib/reportText.js'
 import { useI18n } from '../i18n.jsx'
 import CourseModal from '../components/CourseModal.jsx'
 import PhotoUpload from '../components/PhotoUpload.jsx'
@@ -12,6 +13,8 @@ import { photoUrl } from '../lib/photos.js'
 export default function StudentHome({ ctx }) {
   const { t, lang } = useI18n()
   const [year, setYear] = useState(ctx.year)
+  const [scope, setScope] = useState('year') // 'year' | 1 | 2
+  const picked = useRef(false) // true once the student chose a year themselves
   const [data, setData] = useState(null)
   const [err, setErr] = useState('')
   const [photo, setPhoto] = useState({ path: null, url: null })
@@ -31,23 +34,29 @@ export default function StudentHome({ ctx }) {
           supabase.from('marks').select('*').eq('student_id', ctx.uid),
           supabase.from('assessments').select('*').eq('year', year).order('sort').order('id'),
           supabase.from('assessment_scores').select('*').eq('student_id', ctx.uid),
-          supabase.rpc('my_rank', { p_year: year, p_term: null }),
+          supabase.rpc('my_rank', { p_year: year, p_term: scope === 'year' ? null : scope }),
         ])
         const bad = [st, sub, mk, as, sc, ry].find((r) => r.error)
         if (bad) throw bad.error
         if (off) return
         const years = [...new Set([ctx.year, ...mk.data.map((m) => m.year)])].sort((a, b) => b - a)
         const marks = mk.data.filter((m) => m.year === year)
+        if (!picked.current && !marks.length) {
+          const latest = years.find((y) => mk.data.some((m) => m.year === y))
+          if (latest && latest !== year) { setYear(latest); return } // reloads for that year
+        }
+        const inScope = scope === 'year' ? marks : marks.filter((m) => m.term === scope)
         setData({
           student: st.data, years, marks, assess: as.data,
           scoreOf: Object.fromEntries(sc.data.map((r) => [r.assessment_id, r.score])),
-          card: buildCard({ subjects: sub.data, marks, passMark: ctx.passMark }),
+          card: buildCard({ subjects: sub.data, marks: inScope, passMark: ctx.passMark }),
+          then: marks[0] ? { grade: marks[0].grade, section: marks[0].section } : null, // grade/section in that year
           rank: ry.data?.[0],
         })
       } catch (e) { if (!off) setErr(e.message) }
     })()
     return () => { off = true }
-  }, [year])
+  }, [year, scope])
 
   useEffect(() => {
     if (!data?.student?.photo_path) return
@@ -118,19 +127,32 @@ export default function StudentHome({ ctx }) {
       {/* results */}
       <div className="row">
         <label>{t('year')}
-          <select value={year} onChange={(e) => setYear(Number(e.target.value))}>
+          <select value={year} onChange={(e) => { picked.current = true; setYear(Number(e.target.value)) }}>
             {data.years.map((y) => <option key={y} value={y}>{y}</option>)}
           </select>
         </label>
+        <label>{t('term')}
+          <select value={scope} onChange={(e) => setScope(e.target.value === 'year' ? 'year' : Number(e.target.value))}>
+            <option value="year">{scopeName('year', lang)}</option>
+            <option value={1}>{scopeName(1, lang)}</option>
+            <option value={2}>{scopeName(2, lang)}</option>
+          </select>
+        </label>
       </div>
+      {data.then && (
+        <p className="muted" style={{ marginTop: '-.25rem' }}>
+          {am ? `በ${year} ዓ/ም የነበሩበት ክፍል` : `Your grade in ${year}`}: <strong>{gradeLabel(data.then.grade, lang)}</strong> · {t('section')} {data.then.section}
+          {data.then.grade !== student.grade && (am ? ' (የቀድሞ ክፍል)' : ' (previous grade)')}
+        </p>
+      )}
 
       {card.rows.length === 0 ? (
         <div className="panel"><p>{t('noResults')}</p></div>
       ) : (
         <>
           <div className="summary">
-            <div><div className="avg-num">{card.yearly ?? '—'}<span className="muted" style={{ fontSize: '1.2rem' }}>%</span></div><div className="muted">{t('average')} · {t('yearly')}</div></div>
-            {rank && <div><div className="rank-num">{rank.rank}<span className="muted" style={{ fontSize: '1.2rem' }}> / {rank.class_size}</span></div><div className="muted">{t('rank')} · {t('yearly')}</div></div>}
+            <div><div className="avg-num">{card.yearly ?? '—'}<span className="muted" style={{ fontSize: '1.2rem' }}>%</span></div><div className="muted">{t('average')} · {scopeName(scope, lang)}</div></div>
+            {rank && <div><div className="rank-num">{rank.rank}<span className="muted" style={{ fontSize: '1.2rem' }}> / {rank.class_size}</span></div><div className="muted">{t('rank')} · {scopeName(scope, lang)}</div></div>}
           </div>
           <div className="panel scroll">
             <table>
@@ -145,7 +167,7 @@ export default function StudentHome({ ctx }) {
                 ))}
               </tbody>
             </table>
-            <p className="muted">{t('status')}: {t('res_' + card.status)} ({t('passMark')} {ctx.passMark}%)</p>
+            {scope === 'year' && <p className="muted">{t('status')}: {t('res_' + card.status)} ({t('passMark')} {ctx.passMark}%)</p>}
           </div>
         </>
       )}
