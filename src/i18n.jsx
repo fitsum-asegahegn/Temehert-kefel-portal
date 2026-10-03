@@ -3,7 +3,7 @@ import { createContext, useContext, useState } from 'react'
 const dict = {
   am: {
     appName: 'ትምህርትና ስልጠና ክፍል',
-    signIn: 'ግባ', signOut: 'ውጣ', signingIn: 'በመግባት ላይ…',
+    needInternet: 'ለመግባት ኢንተርኔት ያስፈልጋል። አንዴ ከገቡ በኋላ ያለ ኢንተርኔት ያዩትን ማየት ይችላሉ።', signIn: 'ግባ', signOut: 'ውጣ', signingIn: 'በመግባት ላይ…',
     idOrEmail: 'የተማሪ መታወቂያ ወይም ኢሜይል', password: 'የይለፍ ቃል',
     badLogin: 'መታወቂያው ወይም የይለፍ ቃሉ ትክክል አይደለም።',
     loginHint: 'ተማሪዎች መታወቂያቸውን እና የይለፍ ቃላቸውን ይጠቀሙ፣ ለምሳሌ FTS/27/0142',
@@ -21,7 +21,7 @@ const dict = {
     score: 'ውጤት', outOf: 'ከ', average: 'አማካይ', total: 'ድምር', rank: 'ደረጃ', conduct: 'ስነ ምግባር',
     passMark: 'የማለፊያ ውጤት', status: 'ሁኔታ',
     st_draft: 'ረቂቅ', st_submitted: 'ለግምገማ ቀርቧል', st_approved: 'ጸድቋል', st_missing: 'አልገባም',
-    tab_students: 'ተማሪዎች', tab_subjects: 'ትምህርትና መምህራን', tab_review: 'ውጤት ማጽደቅ', tab_cards: 'የውጤት ካርድ',
+    tab_students: 'ተማሪዎች', tab_subjects: 'ትምህርትና መምህራን', tab_review: 'ውጤት ማጽደቅ', tab_roster: 'ውጤት ዝርዝር', tab_cards: 'የውጤት ካርድ',
     tab_users: 'ተጠቃሚዎችና ቅንብር', tab_reports: 'ሪፖርት', tab_plan: 'ዕቅድ', planUnit: 'መለኪያ', planTarget: 'እቅድ', planBudget: 'በጀት',
     reportCard: 'የተማሪ ውጤት ካርድ',
     res_promoted: 'ያለፈ', res_repeat: 'ክፍል የሚደግም', res_incomplete: 'ውጤት ያልተሟላ',
@@ -30,7 +30,7 @@ const dict = {
   },
   en: {
     appName: 'Education & Training Portal',
-    signIn: 'Sign in', signOut: 'Sign out', signingIn: 'Signing in…',
+    needInternet: 'Signing in needs internet. After you have signed in once, you can view what you opened before without internet.', signIn: 'Sign in', signOut: 'Sign out', signingIn: 'Signing in…',
     idOrEmail: 'Student ID or email', password: 'Password',
     badLogin: 'The ID or password is incorrect.',
     loginHint: 'Students sign in with their ID and password, for example FTS/27/0142',
@@ -48,7 +48,7 @@ const dict = {
     score: 'Mark', outOf: 'Out of', average: 'Average', total: 'Total', rank: 'Rank', conduct: 'Conduct',
     passMark: 'Pass mark', status: 'Status',
     st_draft: 'Draft', st_submitted: 'Submitted', st_approved: 'Approved', st_missing: 'Not entered',
-    tab_students: 'Students', tab_subjects: 'Subjects & teachers', tab_review: 'Approve marks', tab_cards: 'Report cards',
+    tab_students: 'Students', tab_subjects: 'Subjects & teachers', tab_review: 'Approve marks', tab_roster: 'Rosters', tab_cards: 'Report cards',
     tab_users: 'Users & settings', tab_reports: 'Reports', tab_plan: 'Plan', planUnit: 'Unit', planTarget: 'Target', planBudget: 'Budget',
     reportCard: 'Student report card',
     res_promoted: 'Promoted', res_repeat: 'Repeats the grade', res_incomplete: 'Incomplete',
