@@ -21,6 +21,8 @@ export default function StudentHome({ ctx }) {
   const [changing, setChanging] = useState(false)
   const [flash, setFlash] = useState('')
   const [open, setOpen] = useState(null) // course whose assessment breakdown is showing
+  const [profileOpen, setProfileOpen] = useState(() => localStorage.getItem('profileOpen') === '1')
+  const toggleProfile = () => setProfileOpen((v) => { localStorage.setItem('profileOpen', v ? '0' : '1'); return !v })
 
   useEffect(() => {
     let off = false
@@ -95,9 +97,18 @@ export default function StudentHome({ ctx }) {
     <>
       {open && <CourseModal subject={open} terms={termsFor(open)} onClose={() => setOpen(null)} />}
 
-      {/* profile: text only, read-only */}
+      {/* profile: text only, read-only. Folded to one line by default so the results are what you see first. */}
       <div className="panel">
-        <h2>{am ? 'የእኔ መገለጫ' : 'My profile'}</h2>
+        <button type="button" className="profile-toggle" aria-expanded={profileOpen} onClick={toggleProfile}>
+          <span className="profile-thumb">{photo.url && <img src={photo.url} alt="" />}</span>
+          <span style={{ minWidth: 0 }}>
+            <strong>{student.full_name}</strong>
+            <span className="muted" style={{ display: 'block', fontSize: '.85rem' }}>{student.code} · {gradeLabel(student.grade, lang)} {student.section}</span>
+          </span>
+          <span className="chev" aria-hidden="true">{profileOpen ? '▴' : '▾'}</span>
+        </button>
+        {profileOpen && (
+          <div style={{ marginTop: '1rem' }}>
         <div className="profile">
           <div className="profile-photo">
             {photo.url ? <img src={photo.url} alt="" /> : <span className="muted">{t('photoNone')}</span>}
@@ -122,6 +133,8 @@ export default function StudentHome({ ctx }) {
           {am ? 'የተሳሳተ መረጃ ካለ መረጃውን ማስተካከል የሚችሉት አባላት ብቻ ናቸው — አባሉን ያነጋግሩ። ፎቶዎን ግን እራስዎ መቀየር ይችላሉ።'
             : 'Only members can correct this information — ask a member if something is wrong. You can change your own photo.'}
         </p>
+          </div>
+        )}
       </div>
 
       {/* results */}
