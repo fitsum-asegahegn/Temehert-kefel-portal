@@ -148,7 +148,7 @@ Students tab → pick a grade (or tick some students) → **🖨 Print sign-in s
 ## What students see (v0.16)
 - **No report card for students.** They cannot see, preview, download or print the printed card — members/admins generate it
   (Report cards tab).
-- **My profile (read-only text):** photo, full name, ID, grade, section, Christian name, parish, address, city, kebele, guardian name/phone.
+- **My profile (read-only text, folded by default):** one line with the photo, name, ID and grade — tap it to unfold the details (the phone remembers your choice). photo, full name, ID, grade, section, Christian name, parish, address, city, kebele, guardian name/phone.
   Only members/admins can edit these (Students → Details); the database blocks students from editing their row.
   The one thing a student can change is their **own photo**.
 - **My results:** yearly average and rank, each course with its semester and mark out of 100, and a tap on a course shows its
