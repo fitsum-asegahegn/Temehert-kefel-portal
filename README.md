@@ -169,5 +169,19 @@ Students tab → pick a grade (or tick some students) → **🖨 Print sign-in s
 - Safety: only admins can do it; you cannot delete yourself; an admin account must first be changed to another role in the Users tab.
 - Needs the Edge Function redeployed (your GitHub workflow does it on push). No database change.
 
+## v0.21 — import marks, year-end promotion, release results, backup
+- **Import marks from Excel (teachers):** on a course's marks screen → **Import Excel ⬆**. Columns: student **ID** (or full name) + one column per
+  assessment named like the assessment (a trailing "(30)" is fine, so the roster download can be re-imported). The grid is only FILLED —
+  the teacher checks it and presses Save/Submit. Unknown students, out-of-range values and already-approved students are listed and skipped.
+  **Template** downloads a ready sheet with the class list.
+- **Year-end promotion (members/admins):** tab **Promotion** → pick year + grade → students who passed (both semesters approved, average ≥ pass mark)
+  are ticked; repeaters and incomplete ones are not. Adjust, press **Promote** (grade 12 = **Graduate**), then print the new-ID list.
+  **Switch to next year** moves the school year forward after every grade is done.
+- **Release results (members/admins):** Approve marks tab → **Release** per year + semester + grade. Students now see a result only after it is
+  approved AND released (ranks too). Running `migration-007.sql` releases everything that is already approved, so nothing disappears on day one.
+- **Backup (admin):** Users & settings → **Download backup** = one Excel file with students, courses, all marks, assessments, teachers, released
+  semesters and the plan (no passwords/photos). Do it monthly and keep the file safe.
+- Database: run `supabase/migration-007.sql` once (fresh install = `schema.sql`). No Edge Function change.
+
 ## Not built yet
 Plan completion inside the Word/PowerPoint reports.
