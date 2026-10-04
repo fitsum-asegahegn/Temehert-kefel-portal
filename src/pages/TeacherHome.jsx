@@ -4,6 +4,7 @@ import { gradeLabel } from '../lib/grades.js'
 import { runOps } from '../lib/sync.js'
 import { pendingFor } from '../lib/queue.js'
 import { downloadSheet, safeName } from '../lib/rosterExcel.js'
+import { readSheet, mapMarksSheet, downloadMarksTemplate } from '../lib/marksImport.js'
 import { useI18n } from '../i18n.jsx'
 
 let keyN = 0
@@ -119,6 +120,27 @@ export default function TeacherHome({ ctx }) {
   const totalOf = (sid) => round2(defs.reduce((s, a) => s + (num(scores[key(sid, a.id)]) || 0), 0))
   const hasAny = (sid) => defs.some((a) => (scores[key(sid, a.id)] ?? '') !== '')
   const avgOf = (sid) => (hasAny(sid) ? round2((totalOf(sid) / maxScore) * 100) : null)
+
+  // Fill the grid from an Excel/CSV sheet. Nothing is saved until the teacher presses Save / Submit.
+  async function importFile(e) {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    try {
+      const locked = new Set(students.filter((s) => marks[s.id]?.status === 'approved').map((s) => s.id))
+      const r = mapMarksSheet(await readSheet(file), students, defs, locked)
+      if (r.filled) setScores((prev) => ({ ...prev, ...r.fill }))
+      const am = lang === 'am'
+      const parts = [
+        am ? `${r.filled} ተማሪዎች ተሞልተዋል — ይመልከቱና "አስቀምጥ" ይጫኑ።` : `${r.filled} students filled — check them, then press Save.`,
+        r.missingCols.length && (am ? `አልተገኘም (አምድ): ${r.missingCols.join('፣ ')}` : `Column not found: ${r.missingCols.join(', ')}`),
+        r.unmatched.length && (am ? `ያልተገኙ ተማሪዎች: ${r.unmatched.slice(0, 5).join('፣ ')}${r.unmatched.length > 5 ? '…' : ''}` : `Not found in this class: ${r.unmatched.slice(0, 5).join(', ')}${r.unmatched.length > 5 ? '…' : ''}`),
+        r.bad.length && (am ? `ከገደብ ውጭ (አልተሞላም): ${r.bad.slice(0, 3).join(' | ')}${r.bad.length > 3 ? '…' : ''}` : `Out of range (skipped): ${r.bad.slice(0, 3).join(' | ')}${r.bad.length > 3 ? '…' : ''}`),
+        r.skippedLocked && (am ? `${r.skippedLocked} የጸደቁ ተማሪዎች ተዘለሉ` : `${r.skippedLocked} approved students skipped`),
+      ].filter(Boolean)
+      setMsg({ text: parts.join(' · '), bad: !r.filled || parts.length > 1 })
+    } catch (err) { bad(err.message) }
+  }
 
   // Roster for this course: student name, each assessment, total, average % (what is on the screen now)
   function downloadRoster() {
@@ -259,6 +281,14 @@ export default function TeacherHome({ ctx }) {
             <button className="btn ghost" disabled={busy} onClick={() => saveScores('draft')}>{t('save')}</button>
             <button className="btn" disabled={busy} onClick={() => saveScores('submitted')}>{lang === 'am' ? 'ለግምገማ አስገባ' : 'Submit for review'}</button>
             <button className="btn ghost" onClick={downloadRoster} disabled={!students.length}>{lang === 'am' ? 'ዝርዝር Excel ⬇' : 'Roster Excel ⬇'}</button>
+            <label className="btn ghost" style={{ cursor: 'pointer', flexDirection: 'row', color: 'var(--ink)' }}>
+              {lang === 'am' ? 'ከ Excel አስገባ ⬆' : 'Import Excel ⬆'}
+              <input type="file" accept=".xlsx,.xls,.csv" hidden onChange={importFile} />
+            </label>
+            <button className="btn ghost small" disabled={!students.length}
+              onClick={() => downloadMarksTemplate(students, defs, `marks-template-g${sel.grade}-S${term}-${safeName(sel.subject.name_en || 'course' + sel.subject.id)}.xlsx`).catch((e) => bad(e.message))}>
+              {lang === 'am' ? 'ናሙና ፋይል' : 'Template'}
+            </button>
           </div>
         </>
       )}
