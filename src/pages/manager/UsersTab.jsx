@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase, fetchAll, manage } from '../../lib/supabase.js'
 import { useI18n } from '../../i18n.jsx'
+import { downloadBackup } from '../../lib/backup.js'
 
 const ROLES = ['pending', 'teacher', 'member', 'admin']
 
@@ -48,6 +49,18 @@ export default function UsersTab({ ctx }) {
     } catch (e) { fail(e) }
   }
 
+  const [backing, setBacking] = useState(false)
+  const [last, setLast] = useState(localStorage.getItem('lastBackup'))
+  async function backup() {
+    setBacking(true)
+    try {
+      const r = await downloadBackup()
+      setLast(localStorage.getItem('lastBackup'))
+      setMsg({ text: lang === 'am' ? `✓ ${r.students} ተማሪዎች፣ ${r.marks} ውጤቶች ተቀምጠዋል። ፋይሉን በአስተማማኝ ቦታ ያስቀምጡ።` : `✓ Saved ${r.students} students and ${r.marks} marks. Keep the file somewhere safe.`, bad: false })
+    } catch (e) { fail(e) }
+    setBacking(false)
+  }
+
   async function create(e) {
     e.preventDefault()
     try { const r = await manage('create_staff', nf); setCred(r.user); setNf({ full_name: '', email: '', role: 'member' }); load() } catch (e2) { fail(e2) }
@@ -77,6 +90,16 @@ export default function UsersTab({ ctx }) {
           <button className="btn">{t('save')}</button>
         </div>
       </form>
+
+      <div className="panel">
+        <h2>{lang === 'am' ? 'የመረጃ ቅጂ (Backup)' : 'Backup'}</h2>
+        <p className="muted">
+          {lang === 'am' ? 'ተማሪዎች፣ ትምህርቶች፣ ሁሉም ውጤቶች፣ የውጤት አካላት፣ መምህራንና ዕቅድ በአንድ Excel ፋይል። የይለፍ ቃልና ፎቶ አይካተትም። በየወሩ ያውርዱ።'
+            : 'Students, courses, all marks, assessments, teachers and the plan in one Excel file (no passwords or photos). Download it every month.'}
+        </p>
+        <button className="btn" disabled={backing} onClick={backup}>{backing ? t('loading') : (lang === 'am' ? 'ቅጂ አውርድ ⬇' : 'Download backup ⬇')}</button>
+        <span className="muted" style={{ marginLeft: '.75rem' }}>{last ? (lang === 'am' ? `የመጨረሻ ቅጂ: ${last}` : `Last backup: ${last}`) : (lang === 'am' ? 'እስካሁን ቅጂ አልተወሰደም' : 'No backup yet on this phone')}</span>
+      </div>
 
       <form className="panel" onSubmit={create}>
         <h2>{lang === 'am' ? 'አዲስ አባል / አስተዳዳሪ' : 'New member / admin'}</h2>

@@ -11,17 +11,19 @@ export default function ReviewTab({ ctx }) {
   const [subjects, setSubjects] = useState([])
   const [students, setStudents] = useState([])
   const [marks, setMarks] = useState([])
+  const [published, setPublished] = useState(null) // released to students? { published_at } | null
   const [msg, setMsg] = useState({ text: '', bad: false })
 
   async function load() {
     try {
-      const [sub, st, mk] = await Promise.all([
+      const [sub, st, mk, pub] = await Promise.all([
         supabase.from('subjects').select('*').order('sort').order('id'),
         supabase.from('students').select('id, full_name, code, section').eq('grade', grade).eq('active', true).order('section').order('full_name'),
         fetchAll(() => supabase.from('marks').select('*').eq('grade', grade).eq('year', year).eq('term', term)),
+        supabase.from('published_results').select('published_at').eq('year', year).eq('term', term).eq('grade', grade).maybeSingle(),
       ])
       if (sub.error || st.error) throw sub.error || st.error
-      setSubjects(sub.data); setStudents(st.data); setMarks(mk)
+      setSubjects(sub.data); setStudents(st.data); setMarks(mk); setPublished(pub.data || null)
     } catch (e) { setMsg({ text: e.message, bad: true }) }
   }
   useEffect(() => { load() }, [year, term, grade])
@@ -33,6 +35,15 @@ export default function ReviewTab({ ctx }) {
     if (error) return setMsg({ text: error.message, bad: true })
     setMsg({ text: '✓', bad: false }); load()
   }
+
+  // Students see approved marks only after this is pressed (per year + semester + grade).
+  async function setReleased(release) {
+    const key = { year, term, grade }
+    const res = release ? await supabase.from('published_results').upsert(key) : await supabase.from('published_results').delete().match(key)
+    if (res.error) return setMsg({ text: res.error.message, bad: true })
+    setMsg({ text: '✓', bad: false }); load()
+  }
+  const notApproved = marks.filter((m) => m.status !== 'approved').length
 
   const stName = Object.fromEntries(students.map((s) => [s.id, s.full_name]))
 
@@ -49,6 +60,23 @@ export default function ReviewTab({ ctx }) {
         <button className="btn" onClick={() => setStatus(null, 'submitted', 'approved')}>{lang === 'am' ? 'የቀረቡትን ሁሉ አጽድቅ' : 'Approve all submitted'}</button>
       </div>
       {msg.text && <p className={msg.bad ? 'err' : 'ok'} role="status">{msg.text}</p>}
+
+      <div className="panel">
+        <div className="row" style={{ marginBottom: '.25rem' }}>
+          <div style={{ flex: 1 }}>
+            <strong>{lang === 'am' ? 'ውጤቱን ለተማሪዎች ልቀቅ' : 'Release results to students'}</strong>
+            <div className={published ? 'ok' : 'muted'}>
+              {published
+                ? (lang === 'am' ? `ተለቋል — ተማሪዎች ማየት ይችላሉ (${new Date(published.published_at).toLocaleDateString()})` : `Released — students can see it (${new Date(published.published_at).toLocaleDateString()})`)
+                : (lang === 'am' ? 'አልተለቀቀም — ተማሪዎች ገና ማየት አይችሉም።' : 'Not released — students cannot see these results yet.')}
+            </div>
+            {!published && notApproved > 0 && <div className="err">{lang === 'am' ? `${notApproved} ውጤቶች ገና አልጸደቁም።` : `${notApproved} marks are not approved yet.`}</div>}
+          </div>
+          {published
+            ? <button className="btn ghost" onClick={() => setReleased(false)}>{lang === 'am' ? 'ልቀቱን አንሳ' : 'Take back'}</button>
+            : <button className="btn" disabled={!marks.length} onClick={() => setReleased(true)}>{lang === 'am' ? 'ልቀቅ' : 'Release'}</button>}
+        </div>
+      </div>
 
       {subjects.filter((s) => !s.term || s.term === term).map((s) => {
         const list = marks.filter((m) => m.subject_id === s.id)
