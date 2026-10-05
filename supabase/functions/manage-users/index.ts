@@ -56,6 +56,12 @@ Deno.serve(async (req) => {
 
     const body = await req.json()
 
+    // Edge Function changes are written to the audit log here (database triggers can't tell who the caller was).
+    const { data: callerProfile } = await admin.from('profiles').select('full_name').eq('id', user.id).maybeSingle()
+    const audit = async (action: string, details: Record<string, unknown>) => {
+      try { await admin.from('audit_log').insert({ actor: user.id, actor_name: callerProfile?.full_name ?? null, action, details }) } catch { /* never block the action */ }
+    }
+
     // ---- create_students: [{full_name, grade, section?, gender?, guardian_name?, guardian_phone?}]
     if (body.action === 'create_students') {
       const list = body.students as any[]
@@ -98,6 +104,7 @@ Deno.serve(async (req) => {
         await admin.from('initial_passwords').upsert({ student_id: id, password: pin })
         created.push({ id, full_name: name, code, grade, password: pin })
       }
+      if (created.length) await audit('student.create', { count: created.length, grades: [...new Set(created.map((c) => c.grade))] })
       return json({ created, errors })
     }
 
@@ -117,6 +124,7 @@ Deno.serve(async (req) => {
       const id = u.user.id
       await admin.from('user_roles').upsert({ user_id: id, role })
       await admin.from('profiles').upsert({ id, full_name: name, must_change_password: true })
+      await audit('staff.create', { name, role })
       return json({ user: { id, full_name: name, email, role, password } })
     }
 
@@ -132,6 +140,8 @@ Deno.serve(async (req) => {
       if (error) return json({ error: error.message }, 400)
       await admin.from('profiles').update({ must_change_password: true }).eq('id', body.user_id)
       if (target.role === 'student') await admin.from('initial_passwords').upsert({ student_id: body.user_id, password: shown })
+      const { data: tp } = await admin.from('profiles').select('full_name').eq('id', body.user_id).maybeSingle()
+      await audit('password.reset', { name: tp?.full_name ?? '', role: target.role })
       return json({ password: shown })
     }
 
@@ -159,6 +169,12 @@ Deno.serve(async (req) => {
         if (se) { errors.push({ id: st.id, full_name: st.full_name, error: se.message }); continue }
         results.push({ id: st.id, full_name: st.full_name, old_code: st.code, new_code: newCode, graduated: false })
       }
+      if (results.length) {
+        const moved = results.filter((r) => !r.graduated)
+        if (moved.length) await audit('student.promote', { count: moved.length, graduated: false, to_grade: moves.find((m) => m.id === moved[0].id)?.grade })
+        const grads = results.filter((r) => r.graduated)
+        if (grads.length) await audit('student.promote', { count: grads.length, graduated: true })
+      }
       return json({ results, errors })
     }
 
@@ -171,6 +187,8 @@ Deno.serve(async (req) => {
       if (ids.length > 200) return json({ error: 'Delete at most 200 at a time' }, 400)
       const deleted: string[] = []
       const errors: any[] = []
+      const { data: nameRows } = await admin.from('profiles').select('id, full_name').in('id', ids)
+      const nameOf = Object.fromEntries((nameRows ?? []).map((r: any) => [r.id, r.full_name]))
       for (const id of ids) {
         if (id === user.id) { errors.push({ id, error: 'You cannot delete your own account' }); continue }
         const { data: target } = await admin.from('user_roles').select('role').eq('user_id', id).maybeSingle()
@@ -187,6 +205,7 @@ Deno.serve(async (req) => {
         if (error) errors.push({ id, error: error.message })
         else deleted.push(id)
       }
+      if (deleted.length) await audit('user.delete', { count: deleted.length, names: deleted.map((id) => nameOf[id] ?? id) })
       return json({ deleted, errors })
     }
 
