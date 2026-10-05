@@ -4,6 +4,8 @@ import { gradeLabel } from '../lib/grades.js'
 import { runOps } from '../lib/sync.js'
 import { pendingFor } from '../lib/queue.js'
 import { downloadSheet, safeName } from '../lib/rosterExcel.js'
+import Announcements from '../components/Announcements.jsx'
+import MyEvaluation from '../components/MyEvaluation.jsx'
 import { readSheet, mapMarksSheet, downloadMarksTemplate } from '../lib/marksImport.js'
 import { useI18n } from '../i18n.jsx'
 
@@ -196,6 +198,7 @@ export default function TeacherHome({ ctx }) {
 
   return (
     <>
+      <Announcements ctx={ctx} />
       <div className="row">
         <label>{t('subject')}
           <select value={asg.indexOf(sel)} onChange={(e) => { const a = asg[Number(e.target.value)]; setSel(a); if (a.subject.term) setTerm(a.subject.term) }}>
@@ -293,6 +296,7 @@ export default function TeacherHome({ ctx }) {
         </>
       )}
       {editing && msg.text && <p className={msg.bad ? 'err' : 'ok'} role="status">{msg.text}</p>}
+      <MyEvaluation ctx={ctx} />
     </>
   )
 }

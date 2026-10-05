@@ -6,6 +6,8 @@ import { scopeName } from '../lib/reportText.js'
 import { useI18n } from '../i18n.jsx'
 import CourseModal from '../components/CourseModal.jsx'
 import PhotoUpload from '../components/PhotoUpload.jsx'
+import Announcements from '../components/Announcements.jsx'
+import EvaluateTeachers from '../components/EvaluateTeachers.jsx'
 import { photoUrl } from '../lib/photos.js'
 
 // Students see: their profile (read-only text; only members can edit it, the student can change their photo)
@@ -96,6 +98,8 @@ export default function StudentHome({ ctx }) {
   return (
     <>
       {open && <CourseModal subject={open} terms={termsFor(open)} onClose={() => setOpen(null)} />}
+      <Announcements ctx={ctx} />
+      <EvaluateTeachers />
 
       {/* profile: text only, read-only. Folded to one line by default so the results are what you see first. */}
       <div className="panel">

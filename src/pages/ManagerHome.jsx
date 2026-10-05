@@ -6,19 +6,22 @@ import ReviewTab from './manager/ReviewTab.jsx'
 import CardsTab from './manager/CardsTab.jsx'
 import RosterTab from './manager/RosterTab.jsx'
 import PromoteTab from './manager/PromoteTab.jsx'
+import EvaluationTab from './manager/EvaluationTab.jsx'
+import AnnounceTab from './manager/AnnounceTab.jsx'
+import AuditTab from './manager/AuditTab.jsx'
 import PlanTab from './manager/PlanTab.jsx'
 import UsersTab from './manager/UsersTab.jsx'
 import ReportsTab from './manager/ReportsTab.jsx'
 
 const TABS = {
-  students: StudentsTab, subjects: SubjectsTab, review: ReviewTab, roster: RosterTab, cards: CardsTab, promote: PromoteTab, plan: PlanTab,
-  users: UsersTab, reports: ReportsTab,
+  students: StudentsTab, subjects: SubjectsTab, review: ReviewTab, roster: RosterTab, cards: CardsTab, promote: PromoteTab, eval: EvaluationTab, announce: AnnounceTab, plan: PlanTab,
+  users: UsersTab, reports: ReportsTab, audit: AuditTab,
 }
 
 // Members and admins share this screen. Admins get two extra tabs (users, reports).
 export default function ManagerHome({ ctx }) {
   const { t } = useI18n()
-  const keys = ctx.me.role === 'admin' ? Object.keys(TABS) : ['students', 'subjects', 'review', 'roster', 'cards', 'promote', 'plan']
+  const keys = ctx.me.role === 'admin' ? Object.keys(TABS) : ['students', 'subjects', 'review', 'roster', 'cards', 'promote', 'eval', 'announce', 'plan']
   const [tab, setTab] = useState('students')
   const Tab = TABS[tab]
   return (
