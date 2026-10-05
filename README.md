@@ -183,5 +183,22 @@ Students tab → pick a grade (or tick some students) → **🖨 Print sign-in s
   semesters and the plan (no passwords/photos). Do it monthly and keep the file safe.
 - Database: run `supabase/migration-007.sql` once (fresh install = `schema.sql`). No Edge Function change.
 
+## v0.22 — teacher evaluation, audit log, announcements
+- **Teacher evaluation (anonymous).** Members/admins: tab *Teacher evaluation* → choose year + semester → **Open for students** (and **Close**).
+  While open, each student sees *Evaluate your teachers* on their home screen: the teachers assigned to their grade for that semester's courses,
+  8 questions rated 1-5 and an optional comment. **Anonymity is built into the database:** the answers and the "already answered" marker are in
+  two separate tables, nobody can read either table directly, and a teacher/course with fewer than **3 answers shows no averages and no comments**
+  — to anyone, including admins. Members/admins see all teachers (and the written comments, shuffled); a teacher sees only their own averages
+  (home screen → *How students rated me*). A student can rate each teacher+course once per semester.
+- **Audit log (admin only).** Tab *Audit log*: when, who, and what — marks approved/reopened/changed after submission or deleted (one line per action, e.g.
+  "25 marks submitted → approved"), results released/taken back, student details edited, accounts created/deleted, passwords reset, promotions,
+  role changes, courses and teaching assignments, settings. Filter by period/type, search, load more. Entries cannot be edited or deleted from the app.
+  Teachers' normal draft saves are not logged (too noisy); anything after submission is.
+- **Announcements.** Members/admins: tab *Announcements* → post a title, message, audience (everyone / students / teachers), optional event date
+  (shown in Ethiopian and Gregorian), pin to top; edit or delete. Students and teachers see a folded *Announcements* card at the top of their home
+  screen with a count of new ones.
+- Database: run `supabase/migration-008.sql` once (fresh install = `schema.sql`). **Redeploy the Edge Function** (your workflow does it on push) so
+  account/password/promotion/delete actions are written to the audit log.
+
 ## Not built yet
 Plan completion inside the Word/PowerPoint reports.
