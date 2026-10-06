@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { supabase, fetchAll } from '../../lib/supabase.js'
+import { supabase, fetchAll, manage } from '../../lib/supabase.js'
 import { GRADES, gradeLabel } from '../../lib/grades.js'
 import { useI18n } from '../../i18n.jsx'
 
@@ -20,7 +20,7 @@ export default function ReviewTab({ ctx }) {
         supabase.from('subjects').select('*').order('sort').order('id'),
         supabase.from('students').select('id, full_name, code, section').eq('grade', grade).eq('active', true).order('section').order('full_name'),
         fetchAll(() => supabase.from('marks').select('*').eq('grade', grade).eq('year', year).eq('term', term)),
-        supabase.from('published_results').select('published_at').eq('year', year).eq('term', term).eq('grade', grade).maybeSingle(),
+        supabase.from('published_results').select('published_at, telegram_sent_at').eq('year', year).eq('term', term).eq('grade', grade).maybeSingle(),
       ])
       if (sub.error || st.error) throw sub.error || st.error
       setSubjects(sub.data); setStudents(st.data); setMarks(mk); setPublished(pub.data || null)
@@ -42,6 +42,29 @@ export default function ReviewTab({ ctx }) {
     const res = release ? await supabase.from('published_results').upsert(key) : await supabase.from('published_results').delete().match(key)
     if (res.error) return setMsg({ text: res.error.message, bad: true })
     setMsg({ text: '✓', bad: false }); load()
+  }
+  // After releasing: message every student/parent who connected Telegram (in slices, so a big grade never times out).
+  const [tg, setTg] = useState({ busy: false, text: '', bad: false })
+  async function sendTelegram() {
+    const am = lang === 'am'
+    const again = published?.telegram_sent_at
+    if (!window.confirm(again
+      ? (am ? 'ለዚህ ክፍል አስቀድሞ ተልኳል። እንደገና ይላክ?' : 'Already sent for this grade. Send again?')
+      : (am ? 'ውጤቱ ለተገናኙ ተማሪዎችና ወላጆች በቴሌግራም ይላክ?' : 'Send the results on Telegram to every connected student and parent?'))) return
+    setTg({ busy: true, text: '', bad: false })
+    try {
+      const sum = { sent: 0, blocked: 0, failed: 0, total: 0, withoutLink: 0, students: 0 }
+      for (let skip = 0; ;) {
+        const r = await manage('notify_release', { year, term, grade, skip })
+        sum.sent += r.sent; sum.blocked += r.blocked; sum.failed += r.failed; sum.total = r.total; sum.withoutLink = r.withoutLink; sum.students = r.students
+        if (r.next == null) break
+        skip = r.next
+      }
+      setTg({ busy: false, bad: sum.failed > 0, text: am
+        ? `✓ ${sum.sent} / ${sum.total} መልእክቶች ተልከዋል${sum.blocked ? ` · ${sum.blocked} ቦቱን አግደዋል` : ''}${sum.failed ? ` · ${sum.failed} አልተላኩም` : ''} · ከ${sum.students} ተማሪዎች ${sum.withoutLink} ቴሌግራም አላገናኙም`
+        : `✓ ${sum.sent} of ${sum.total} messages sent${sum.blocked ? ` · ${sum.blocked} blocked the bot` : ''}${sum.failed ? ` · ${sum.failed} failed` : ''} · ${sum.withoutLink} of ${sum.students} students have nobody connected` })
+      load()
+    } catch (e) { setTg({ busy: false, text: e.message, bad: true }) }
   }
   const notApproved = marks.filter((m) => m.status !== 'approved').length
 
@@ -76,6 +99,15 @@ export default function ReviewTab({ ctx }) {
             ? <button className="btn ghost" onClick={() => setReleased(false)}>{lang === 'am' ? 'ልቀቱን አንሳ' : 'Take back'}</button>
             : <button className="btn" disabled={!marks.length} onClick={() => setReleased(true)}>{lang === 'am' ? 'ልቀቅ' : 'Release'}</button>}
         </div>
+        {published && (
+          <div className="row" style={{ marginBottom: 0, marginTop: '.5rem' }}>
+            <div className="muted" style={{ flex: 1 }}>📨 Telegram: {published.telegram_sent_at
+              ? (lang === 'am' ? `ተልኳል (${new Date(published.telegram_sent_at).toLocaleDateString()})` : `sent (${new Date(published.telegram_sent_at).toLocaleDateString()})`)
+              : (lang === 'am' ? 'ገና አልተላከም' : 'not sent yet')}</div>
+            <button className="btn ghost small" disabled={tg.busy} onClick={sendTelegram}>{tg.busy ? '…' : (lang === 'am' ? 'በቴሌግራም ላክ' : 'Send on Telegram')}</button>
+          </div>
+        )}
+        {tg.text && <p className={tg.bad ? 'err' : 'ok'} role="status">{tg.text}</p>}
       </div>
 
       {subjects.filter((s) => !s.term || s.term === term).map((s) => {

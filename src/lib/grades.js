@@ -28,6 +28,17 @@ export const MAX_STUDENT_PW = 60 // keeps the padded password within Supabase's 
 export const isStudentPassword = (v) =>
   v.length >= MIN_STUDENT_PW && v.length <= MAX_STUDENT_PW && !/^(.)\1+$/.test(v) && v !== '1234'
 
+// Parents sign in with their mobile number; it maps to a hidden email, just like student IDs do.
+export const PARENT_DOMAIN = import.meta.env?.VITE_PARENT_DOMAIN || 'parents.fts-portal.app'
+export function normalizePhone(input) {
+  let d = String(input ?? '').replace(/\D/g, '')
+  if (d.startsWith('251')) d = d.slice(3)
+  if (d.startsWith('0')) d = d.slice(1)
+  return /^[79]\d{8}$/.test(d) ? d : null
+}
+export const parentEmail = (nine) => `p${nine}@${PARENT_DOMAIN}`
+export const phoneFromEmail = (email) => { const m = /^p(\d{9})@/.exec(email || ''); return m ? '0' + m[1] : '' }
+
 export const SCHOOL = 'FTS'
 export const BATCH = '27'
 export const prefixFor = (g) => (g === 1 ? 'A' : g === 2 ? 'B' : String(g - 3))

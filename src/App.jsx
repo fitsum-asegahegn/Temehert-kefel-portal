@@ -8,10 +8,11 @@ import ChangePassword from './pages/ChangePassword.jsx'
 import StudentHome from './pages/StudentHome.jsx'
 import TeacherHome from './pages/TeacherHome.jsx'
 import ManagerHome from './pages/ManagerHome.jsx'
+import ParentHome from './pages/ParentHome.jsx'
 import PhotoUpload from './components/PhotoUpload.jsx'
 import StatusBar from './components/StatusBar.jsx'
 
-const PAGES = { student: StudentHome, teacher: TeacherHome, member: ManagerHome, admin: ManagerHome }
+const PAGES = { parent: ParentHome, student: StudentHome, teacher: TeacherHome, member: ManagerHome, admin: ManagerHome }
 
 const VERSION = `v${__APP_VERSION__} · ${__BUILD_TIME__} UTC`
 

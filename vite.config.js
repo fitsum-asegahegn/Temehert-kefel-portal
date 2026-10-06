@@ -31,7 +31,16 @@ export default defineConfig({
           { src: 'icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any maskable' }
         ]
       },
-      workbox: { navigateFallback: 'index.html' }
+      workbox: {
+        navigateFallback: 'index.html',
+        // report/PDF/Excel code is loaded on demand; keep those big files too so they work offline
+        maximumFileSizeToCacheInBytes: 6 * 1024 * 1024,
+        runtimeCaching: [
+          // Ethiopic fonts, so Amharic text looks right offline
+          { urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i, handler: 'StaleWhileRevalidate', options: { cacheName: 'fts-font-css' } },
+          { urlPattern: /^https:\/\/fonts\.gstatic\.com\/.*/i, handler: 'CacheFirst', options: { cacheName: 'fts-font-files', expiration: { maxEntries: 40, maxAgeSeconds: 60 * 60 * 24 * 365 }, cacheableResponse: { statuses: [0, 200] } } },
+        ],
+      }
     })
   ]
 })

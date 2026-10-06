@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { supabase } from '../lib/supabase.js'
-import { normalizeCode, emailForCode, studentPassword } from '../lib/grades.js'
+import { normalizeCode, emailForCode, studentPassword, normalizePhone, parentEmail } from '../lib/grades.js'
 import { useI18n } from '../i18n.jsx'
 
 export default function Login() {
@@ -13,14 +13,17 @@ export default function Login() {
   async function submit(e) {
     e.preventDefault()
     setErr('')
+    if (!navigator.onLine) return setErr(t('needInternet'))
     setBusy(true)
     // Staff type an email; students type their ID, which maps to a hidden email.
     const code = normalizeCode(id)
-    const email = id.includes('@') ? id.trim().toLowerCase() : code ? emailForCode(code) : null
+    const phone = !id.includes('@') && !code ? normalizePhone(id) : null
+    const email = id.includes('@') ? id.trim().toLowerCase() : code ? emailForCode(code) : phone ? parentEmail(phone) : null
     if (!email) { setBusy(false); return setErr(t('badLogin')) }
-    let { error } = await supabase.auth.signInWithPassword({ email, password: code ? studentPassword(pw.trim()) : pw })
-    // accounts made before the 4-digit PIN change still have their old full password
-    if (error && code) ({ error } = await supabase.auth.signInWithPassword({ email, password: pw }))
+    const simple = !!(code || phone) // students (ID) and parents (phone) use the simple password scheme
+    let { error } = await supabase.auth.signInWithPassword({ email, password: simple ? studentPassword(pw.trim()) : pw })
+    // accounts made before the 4-digit scheme still have their old full password
+    if (error && simple) ({ error } = await supabase.auth.signInWithPassword({ email, password: pw }))
     setBusy(false)
     if (error) setErr(t('badLogin'))
   }

@@ -9,7 +9,7 @@ export default function SubjectsTab({ ctx }) {
   const [teachers, setTeachers] = useState([])
   const [assign, setAssign] = useState([])
   const [msg, setMsg] = useState({ text: '', bad: false })
-  const [sf, setSf] = useState({ name_am: '', name_en: '', max_score: 100 })
+  const [sf, setSf] = useState({ name_am: '', name_en: '', max_score: 100, term: 1 })
   const [tf, setTf] = useState({ full_name: '', email: '' })
   const [af, setAf] = useState({ teacher_id: '', subject_id: '', grade: 5 })
   const [cred, setCred] = useState(null)
@@ -34,9 +34,14 @@ export default function SubjectsTab({ ctx }) {
 
   async function addSubject(e) {
     e.preventDefault()
-    const { error } = await supabase.from('subjects').insert({ name_am: sf.name_am.trim(), name_en: sf.name_en.trim() || null, max_score: Number(sf.max_score), sort: subjects.length })
+    const { error } = await supabase.from('subjects').insert({ name_am: sf.name_am.trim(), name_en: sf.name_en.trim() || null, max_score: Number(sf.max_score), term: Number(sf.term), sort: subjects.length })
     if (error) return fail(error)
-    setSf({ name_am: '', name_en: '', max_score: 100 }); load()
+    setSf({ name_am: '', name_en: '', max_score: 100, term: sf.term }); load()
+  }
+  async function setTerm(id, v) {
+    const { error } = await supabase.from('subjects').update({ term: Number(v) }).eq('id', id)
+    if (error) return fail(error)
+    load()
   }
   async function addTeacher(e) {
     e.preventDefault()
@@ -67,9 +72,32 @@ export default function SubjectsTab({ ctx }) {
           <label>አማርኛ<input value={sf.name_am} onChange={(e) => setSf({ ...sf, name_am: e.target.value })} required /></label>
           <label>English<input value={sf.name_en} onChange={(e) => setSf({ ...sf, name_en: e.target.value })} /></label>
           <label>{t('outOf')}<input type="number" min="1" value={sf.max_score} onChange={(e) => setSf({ ...sf, max_score: e.target.value })} style={{ width: '6rem' }} /></label>
+          <label>{t('term')}
+            <select value={sf.term} onChange={(e) => setSf({ ...sf, term: e.target.value })}>
+              <option value={1}>{t('term1')}</option><option value={2}>{t('term2')}</option>
+            </select>
+          </label>
           <button className="btn">{t('save')}</button>
         </div>
-        <p>{subjects.map((s) => `${s.name_am} (${s.max_score})`).join(' · ') || '—'}</p>
+        <p className="muted">{lang === 'am' ? 'እያንዳንዱ ትምህርት የሚሰጠው በአንድ መንፈቀ ዓመት ብቻ ነው። በሁለተኛው መንፈቀ ዓመት አዲስ ትምህርት ይጨምሩ።' : 'Each course is taught in one semester only. In the second semester, add the new courses.'}</p>
+        <div className="scroll">
+          <table>
+            <tbody>
+              {subjects.map((s) => (
+                <tr key={s.id}>
+                  <td>{s.name_am}{s.name_en ? <span className="muted"> · {s.name_en}</span> : null}</td>
+                  <td className="num">{s.max_score}</td>
+                  <td>
+                    <select value={s.term ?? ''} aria-label={s.name_am} onChange={(e) => setTerm(s.id, e.target.value)}>
+                      {!s.term && <option value="">—</option>}
+                      <option value={1}>{t('term1')}</option><option value={2}>{t('term2')}</option>
+                    </select>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </form>
 
       <form className="panel" onSubmit={addTeacher}>
@@ -97,7 +125,7 @@ export default function SubjectsTab({ ctx }) {
           </label>
           <label>{t('subject')}
             <select value={af.subject_id} onChange={(e) => setAf({ ...af, subject_id: e.target.value })} required>
-              <option value="" />{subjects.map((x) => <option key={x.id} value={x.id}>{x.name_am}</option>)}
+              <option value="" />{subjects.map((x) => <option key={x.id} value={x.id}>{x.name_am}{x.term ? ` · ${t('term' + x.term)}` : ''}</option>)}
             </select>
           </label>
           <label>{t('grade')}

@@ -1,10 +1,11 @@
 import { useState } from 'react'
 import { supabase } from '../lib/supabase.js'
+import { signOutClean } from '../lib/sync.js'
 import { isStudentPassword, studentPassword, MIN_STUDENT_PW, MAX_STUDENT_PW } from '../lib/grades.js'
 import { useI18n } from '../i18n.jsx'
 
 export default function ChangePassword({ uid, role, onDone }) {
-  const student = role === 'student'
+  const student = role === 'student' || role === 'parent'
   const { t } = useI18n()
   const [pw, setPw] = useState('')
   const [busy, setBusy] = useState(false)
@@ -33,7 +34,7 @@ export default function ChangePassword({ uid, role, onDone }) {
           </label>
           {err && <p className="err" role="alert">{err}</p>}
           <button className="btn" disabled={busy}>{t('saveNew')}</button>
-          <button type="button" className="btn ghost" style={{ marginLeft: '.5rem' }} onClick={() => supabase.auth.signOut()}>{t('signOut')}</button>
+          <button type="button" className="btn ghost" style={{ marginLeft: '.5rem' }} onClick={() => signOutClean(uid)}>{t('signOut')}</button>
         </form>
       </div>
     </div>

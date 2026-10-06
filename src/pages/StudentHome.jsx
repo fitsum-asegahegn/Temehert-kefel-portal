@@ -8,11 +8,15 @@ import CourseModal from '../components/CourseModal.jsx'
 import PhotoUpload from '../components/PhotoUpload.jsx'
 import Announcements from '../components/Announcements.jsx'
 import EvaluateTeachers from '../components/EvaluateTeachers.jsx'
+import TelegramConnect from '../components/TelegramConnect.jsx'
 import { photoUrl } from '../lib/photos.js'
 
 // Students see: their profile (read-only text; only members can edit it, the student can change their photo)
 // and their results. They do not see or generate the printed report card — members do that.
-export default function StudentHome({ ctx }) {
+// Used by students (their own results) and, read-only, by parents (studentId = the child being viewed).
+export default function StudentHome({ ctx, studentId }) {
+  const sid = studentId || ctx.uid
+  const parentView = Boolean(studentId)
   const { t, lang } = useI18n()
   const [year, setYear] = useState(ctx.year)
   const [scope, setScope] = useState('year') // 'year' | 1 | 2
@@ -33,12 +37,14 @@ export default function StudentHome({ ctx }) {
       try {
         // RLS returns only this student's own approved marks.
         const [st, sub, mk, as, sc, ry] = await Promise.all([
-          supabase.from('students').select('*').eq('id', ctx.uid).single(),
+          supabase.from('students').select('*').eq('id', sid).single(),
           supabase.from('subjects').select('*').order('sort').order('id'),
-          supabase.from('marks').select('*').eq('student_id', ctx.uid),
+          supabase.from('marks').select('*').eq('student_id', sid),
           supabase.from('assessments').select('*').eq('year', year).order('sort').order('id'),
-          supabase.from('assessment_scores').select('*').eq('student_id', ctx.uid),
-          supabase.rpc('my_rank', { p_year: year, p_term: scope === 'year' ? null : scope }),
+          supabase.from('assessment_scores').select('*').eq('student_id', sid),
+          (parentView
+          ? supabase.rpc('child_rank', { p_student: sid, p_year: year, p_term: scope === 'year' ? null : scope })
+          : supabase.rpc('my_rank', { p_year: year, p_term: scope === 'year' ? null : scope })),
         ])
         const bad = [st, sub, mk, as, sc, ry].find((r) => r.error)
         if (bad) throw bad.error
@@ -99,7 +105,8 @@ export default function StudentHome({ ctx }) {
     <>
       {open && <CourseModal subject={open} terms={termsFor(open)} onClose={() => setOpen(null)} />}
       <Announcements ctx={ctx} />
-      <EvaluateTeachers />
+      {!parentView && <TelegramConnect ctx={ctx} />}
+      {!parentView && <EvaluateTeachers />}
 
       {/* profile: text only, read-only. Folded to one line by default so the results are what you see first. */}
       <div className="panel">
@@ -123,7 +130,7 @@ export default function StudentHome({ ctx }) {
             ))}
           </dl>
         </div>
-        {changing ? (
+        {!parentView && (changing ? (
           <PhotoUpload targetId={ctx.uid} self currentUrl={photo.url} oldPath={photo.path}
             onCancel={() => setChanging(false)}
             onDone={(path) => { setChanging(false); setFlash(t('photoSaved')); photoUrl(path).then((url) => setPhoto({ path, url })) }} />
@@ -132,10 +139,12 @@ export default function StudentHome({ ctx }) {
             <button className="btn ghost small" onClick={() => { setFlash(''); setChanging(true) }}>{t('photoChange')}</button>
             {flash && <span className="ok" role="status">{flash}</span>}
           </div>
-        )}
+        ))}
         <p className="muted" style={{ marginTop: '.75rem' }}>
-          {am ? 'የተሳሳተ መረጃ ካለ መረጃውን ማስተካከል የሚችሉት አባላት ብቻ ናቸው — አባሉን ያነጋግሩ። ፎቶዎን ግን እራስዎ መቀየር ይችላሉ።'
-            : 'Only members can correct this information — ask a member if something is wrong. You can change your own photo.'}
+          {parentView
+            ? (am ? 'የተሳሳተ መረጃ ካለ መረጃውን ማስተካከል የሚችሉት የትምህርት ክፍል አባላት ብቻ ናቸው — አባሉን ያነጋግሩ።' : 'Only the department members can correct this information — please ask a member.')
+            : (am ? 'የተሳሳተ መረጃ ካለ መረጃውን ማስተካከል የሚችሉት አባላት ብቻ ናቸው — አባሉን ያነጋግሩ። ፎቶዎን ግን እራስዎ መቀየር ይችላሉ።'
+              : 'Only members can correct this information — ask a member if something is wrong. You can change your own photo.')}
         </p>
           </div>
         )}

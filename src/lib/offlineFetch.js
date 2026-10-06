@@ -22,7 +22,7 @@ const isApi = (url) => /\/rest\/v1\/|\/storage\/v1\//.test(url)
 const cacheable = (req) =>
   req.method === 'GET'
     ? /\/rest\/v1\//.test(req.url) || /\/storage\/v1\/object\/authenticated\//.test(req.url)
-    : req.method === 'POST' && /\/rest\/v1\/rpc\/(my_rank|grade_ranking)(\?|$)/.test(req.url)
+    : req.method === 'POST' && /\/rest\/v1\/rpc\/(my_rank|grade_ranking|child_rank)(\?|$)/.test(req.url)
 
 async function keyFor(req) {
   const u = new URL(req.url)

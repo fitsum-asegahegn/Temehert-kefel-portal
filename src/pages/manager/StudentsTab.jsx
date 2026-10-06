@@ -4,6 +4,7 @@ import { GRADES, gradeLabel } from '../../lib/grades.js'
 import { useI18n } from '../../i18n.jsx'
 import CredentialSlips from '../../components/CredentialSlips.jsx'
 import PhotoUpload from '../../components/PhotoUpload.jsx'
+import ParentAccounts from '../../components/ParentAccounts.jsx'
 import { photoUrl } from '../../lib/photos.js'
 import { parseStudentSheet, downloadStudentTemplate } from '../../lib/studentImport.js'
 
@@ -119,6 +120,40 @@ export default function StudentsTab({ ctx }) {
     setBusy(false)
   }
 
+  // Parent logins for everyone shown (or only the ticked students), made from each child's guardian phone number.
+  async function createParents() {
+    const list = shown.filter((s) => (picked.size ? picked.has(s.id) : true))
+    if (!list.length) return
+    const withPhone = list.filter((s) => s.guardian_phone).length
+    const ask = lang === 'am'
+      ? `ለ${list.length} ተማሪዎች የወላጅ መለያ ከወላጅ ስልክ ቁጥር ይፈጠር? (${withPhone} ስልክ አላቸው)`
+      : `Create parent logins for ${list.length} students from their guardian phone numbers? (${withPhone} have a phone number)`
+    if (!window.confirm(ask)) return
+    setBusy(true); setMsg({ text: '', bad: false })
+    try {
+      const made = new Map(), linked = [], skipped = []
+      for (let i = 0; i < list.length; i += 25) {
+        const r = await manage('create_parents', { student_ids: list.slice(i, i + 25).map((s) => s.id) })
+        for (const c of r.created) made.set(c.parent_id, c)
+        linked.push(...r.linked); skipped.push(...r.skipped)
+      }
+      const am = lang === 'am'
+      setMsg({
+        text: `${made.size} ${am ? 'መለያዎች ተፈጠሩ' : 'accounts created'} · ${linked.length} ${am ? 'ከነበረ ወላጅ ጋር ተገናኙ' : 'linked to an existing parent'}` +
+          (skipped.length ? ` · ${skipped.length} ${am ? 'ተዘለሉ' : 'skipped'}: ${skipped.slice(0, 4).map((x) => `${x.full_name ?? ''} (${x.reason})`).join('; ')}${skipped.length > 4 ? '…' : ''}` : ''),
+        bad: skipped.length > 0,
+      })
+      if (made.size) {
+        setSlips({
+          items: [...made.values()].map((c) => ({ full_name: `${c.name} — ${am ? 'ወላጅ' : 'Parent'} (${c.students.map((x) => x.name).join(', ')})`, code: c.login, password: c.password, grade: c.students[0].grade })),
+          title: am ? 'የወላጅ መግቢያ ወረቀቶች' : 'Parent sign-in slips',
+          note: am ? 'የይለፍ ቃሎች አንዴ ብቻ ይታያሉ። ወላጆች ሲገቡ የራሳቸውን ይመርጣሉ።' : 'Passwords are shown only once. Parents choose their own when they sign in.',
+        })
+      }
+    } catch (e) { setMsg({ text: e.message, bad: true }) }
+    setBusy(false)
+  }
+
   async function reset(s) {
     if (!window.confirm(`${s.full_name} — ${lang === 'am' ? 'አዲስ የይለፍ ቃል ይፈጠር?' : 'Create a new password?'}`)) return
     try {
@@ -186,6 +221,7 @@ export default function StudentsTab({ ctx }) {
           <h3 style={{ marginTop: '1rem' }}>{t('photoTitle')}</h3>
           <PhotoUpload targetId={edit.id} currentUrl={editPhoto} oldPath={edit.photo_path}
             onDone={(path) => { setEdit({ ...edit, photo_path: path }); load() }} />
+          <ParentAccounts student={edit} onSlips={setSlips} />
         </form>
       )}
 
@@ -201,6 +237,9 @@ export default function StudentsTab({ ctx }) {
           <button className="btn ghost small" onClick={() => setPicked(new Set(shown.map((s) => s.id)))}>{lang === 'am' ? 'ሁሉንም ምረጥ' : 'Select all shown'}</button>
           <button className="btn ghost small" disabled={busy || !shown.length} onClick={printSlips}>
             {lang === 'am' ? `🖨 የመግቢያ ወረቀቶች (${picked.size || shown.length})` : `🖨 Print sign-in slips (${picked.size || shown.length})`}
+          </button>
+          <button className="btn ghost small" disabled={busy || !shown.length} onClick={createParents}>
+            {lang === 'am' ? `👪 የወላጅ መለያዎች (${picked.size || shown.length})` : `👪 Create parent logins (${picked.size || shown.length})`}
           </button>
           {ctx.me.role === 'admin' && (
             <button className="btn danger small" disabled={busy || !picked.size} onClick={removeSelected}>

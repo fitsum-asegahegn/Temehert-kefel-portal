@@ -15,7 +15,7 @@ export default function UsersTab({ ctx }) {
 
   async function load() {
     try {
-      const roles = await fetchAll(() => supabase.from('user_roles').select('user_id, role').neq('role', 'student'))
+      const roles = await fetchAll(() => supabase.from('user_roles').select('user_id, role').not('role', 'in', '(student,parent)'))
       const ids = roles.map((r) => r.user_id)
       const { data: profiles, error } = ids.length ? await supabase.from('profiles').select('id, full_name, email').in('id', ids) : { data: [] }
       if (error) throw error

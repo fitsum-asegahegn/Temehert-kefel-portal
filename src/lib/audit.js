@@ -8,6 +8,8 @@ export const CATEGORIES = [
   ['student', { am: 'ተማሪዎች', en: 'Students' }],
   ['user', { am: 'መለያዎች', en: 'Accounts' }],
   ['password', { am: 'የይለፍ ቃል', en: 'Passwords' }],
+  ['parent', { am: 'ወላጆች', en: 'Parents' }],
+  ['telegram', { am: 'ቴሌግራም', en: 'Telegram' }],
   ['role', { am: 'ሚናዎች', en: 'Roles' }],
   ['subject', { am: 'ትምህርቶች', en: 'Courses' }],
   ['assignment', { am: 'የመምህር ምደባ', en: 'Teaching' }],
@@ -60,6 +62,12 @@ export function describe(row, lang = 'am') {
       return am ? `የ${d.name} የይለፍ ቃል ተቀየረ` : `Password reset for ${d.name}`
     case 'staff.create':
       return am ? `አዲስ ${d.role}: ${d.name}` : `New ${d.role} created: ${d.name}`
+    case 'telegram.notify':
+      return am ? `ውጤት በቴሌግራም ተላከ — ${g(d.grade)}፣ ${d.year} ዓ/ም ${sem(d.term)} (${d.messages} መልእክቶች)` : `Results sent on Telegram — ${g(d.grade)}, ${d.year} ${sem(d.term)} (${d.messages} messages)`
+    case 'parent.create':
+      return am ? `${d.created} የወላጅ መለያዎች ተፈጠሩ፤ ${d.linked} ተማሪዎች አስቀድሞ ካሉ ወላጆች ጋር ተገናኙ` : `${d.created} parent accounts created; ${d.linked} students linked to existing parents`
+    case 'parent.unlink':
+      return am ? `ወላጅ ከተማሪ ተለየ${d.removed ? ' (መለያው ተሰረዘ)' : ''}` : `Parent unlinked from a student${d.removed ? ' (account removed)' : ''}`
     case 'subject.add':
       return am ? `ትምህርት ተጨመረ: ${d.name} (${d.term ? sem(d.term) : '—'})` : `Course added: ${d.name} (${d.term ? sem(d.term) : '—'})`
     case 'subject.edit':

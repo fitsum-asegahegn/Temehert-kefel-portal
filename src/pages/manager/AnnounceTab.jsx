@@ -13,7 +13,7 @@ export default function AnnounceTab({ ctx }) {
   const [form, setForm] = useState(blank)
   const [editing, setEditing] = useState(null)
   const [msg, setMsg] = useState({ text: '', bad: false })
-  const AUD = { all: am ? 'ለሁሉም' : 'Everyone', students: am ? 'ለተማሪዎች' : 'Students', teachers: am ? 'ለመምህራን' : 'Teachers' }
+  const AUD = { all: am ? 'ለሁሉም' : 'Everyone', students: am ? 'ለተማሪዎች' : 'Students', teachers: am ? 'ለመምህራን' : 'Teachers', parents: am ? 'ለወላጆች' : 'Parents' }
 
   async function load() {
     const { data, error } = await supabase.from('announcements').select('*').order('pinned', { ascending: false }).order('created_at', { ascending: false })

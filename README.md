@@ -200,5 +200,39 @@ Students tab → pick a grade (or tick some students) → **🖨 Print sign-in s
 - Database: run `supabase/migration-008.sql` once (fresh install = `schema.sql`). **Redeploy the Edge Function** (your workflow does it on push) so
   account/password/promotion/delete actions are written to the audit log.
 
+## v0.23 — Parent access (read-only)
+- **A parent signs in with their mobile number** (0912 345 678, +251…, any format) and a simple password (4 digits first, then their own — same
+  rules as students). They see ONLY their linked child/children: profile, photo, and the results the school has **released** (average, rank, courses,
+  assessment breakdown, previous years) — exactly the student's results screen but read-only. They also see announcements marked "Parents".
+  They cannot change anything, see no other student, and cannot evaluate teachers.
+- **Creating logins (members/admins):**
+  - one student: Students → **Details** → *Parent access* → enter/confirm the phone → **Create parent login** → print the slip (shown once);
+  - many: Students tab → pick a grade (or tick students) → **👪 Create parent logins** — made from each child's *guardian phone*; students with no valid phone are listed and skipped.
+  - Brothers/sisters with the same phone share **one** parent account (the second child is just linked).
+  - **Reset password** and **Unlink** are in the same Details section (a parent left with no child is removed). Admins can also delete a parent in the normal way.
+- **Safety:** a parent can only ever read rows tied to their own children (enforced by the database, not by hidden buttons). A wrong phone number in a
+  student's record would give that number's owner access — so hand the slip to the parent in person and check the number.
+- Database: run `supabase/migration-009.sql` once (fresh install = `schema.sql`). Redeploy the Edge Function (your workflow does it on push).
+
+## v0.24 — Results on Telegram
+- **Connect (student or parent):** on their home screen → *Results on Telegram* → **Connect Telegram**. Telegram opens, they press START, and the app
+  shows "connected". Only the Telegram they connect while signed in receives anything (one-time code, valid 15 minutes). They can disconnect in the app
+  or send /stop to the bot. One chat can serve several accounts (e.g. a parent and the child on one phone).
+- **Send (members/admins):** *Approve marks* tab → after **Release**, press **Send on Telegram**. Every connected student/parent of that grade gets one message:
+  name, grade, semester, **average, rank** and each course mark, plus the app link. The panel shows "sent on <date>" and asks before sending again;
+  it reports how many were sent, blocked the bot, or have nobody connected. Large grades are sent in slices automatically.
+- **One-time setup (about 10 minutes):**
+  1. In Telegram open **@BotFather** → `/newbot` → pick a name and a username (e.g. `FinoteResultsBot`) → copy the **token**.
+  2. Supabase → **Edge Functions → Secrets**: add `TELEGRAM_BOT_TOKEN` (the token), `TELEGRAM_WEBHOOK_SECRET` (any long random text, letters/digits/`_`/`-`),
+     and optionally `APP_URL` (your site address, shown in the message).
+  3. GitHub → Settings → Secrets → Actions: add `VITE_TELEGRAM_BOT` = the bot username **without** @. (Leave it out and the Telegram panels stay hidden.)
+  4. Upload this version; wait for **both** workflows (site + Edge Functions) to be green. The new `deploy-functions.yml` also deploys `telegram-webhook`.
+  5. Tell Telegram where to send the bot's messages — open this address once in a browser (replace the three parts):
+     `https://api.telegram.org/bot<TOKEN>/setWebhook?url=https://<PROJECT_REF>.supabase.co/functions/v1/telegram-webhook&secret_token=<WEBHOOK_SECRET>`
+     It should answer `"Webhook was set"`.
+- **Privacy note:** a Telegram message is not end-to-end encrypted and stays in the person's chat history, and it contains a child's marks.
+  Only people who connected themselves get it, but get the Sebsabi's agreement first.
+- Database: run `supabase/migration-010.sql` once (fresh install = `schema.sql`).
+
 ## Not built yet
 Plan completion inside the Word/PowerPoint reports.
