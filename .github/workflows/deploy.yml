@@ -1,4 +1,4 @@
-name: Deploy to GitHub Pages 
+name: Deploy to GitHub Pages
 on:
   push:
     branches: [main]
@@ -21,6 +21,7 @@ jobs:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
           VITE_STUDENT_DOMAIN: ${{ secrets.VITE_STUDENT_DOMAIN }}
+          VITE_TELEGRAM_BOT: ${{ secrets.VITE_TELEGRAM_BOT }}
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist
