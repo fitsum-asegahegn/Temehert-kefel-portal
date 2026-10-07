@@ -4,6 +4,7 @@ import { GRADES, gradeLabel } from '../../lib/grades.js'
 import { useI18n } from '../../i18n.jsx'
 import CredentialSlips from '../../components/CredentialSlips.jsx'
 import PhotoUpload from '../../components/PhotoUpload.jsx'
+import { downloadSheet } from '../../lib/rosterExcel.js'
 import ParentAccounts from '../../components/ParentAccounts.jsx'
 import { photoUrl } from '../../lib/photos.js'
 import { parseStudentSheet, downloadStudentTemplate } from '../../lib/studentImport.js'
@@ -83,6 +84,29 @@ export default function StudentsTab({ ctx }) {
 
   // Re-print the first passwords for everyone shown (or only the ticked students). Only students who have
   // not yet changed their password still have one stored.
+  // Excel for the HR (attendance) app: ID, name, grade, section and the FIRST password (only students who have not changed it yet have one).
+  async function exportForHr() {
+    const am = lang === 'am'
+    if (!window.confirm(am
+      ? 'ፋይሉ የተማሪዎችን የመጀመሪያ የይለፍ ቃሎች በግልጽ ይይዛል። ወደ HR መተግበሪያ ካስገቡ በኋላ ፋይሉን ይሰርዙት። ይቀጥሉ?'
+      : 'This file contains students\' first passwords in plain text. Delete it after importing it into the HR app. Continue?')) return
+    setBusy(true); setMsg({ text: '', bad: false })
+    try {
+      const pw = await fetchAll(() => supabase.from('initial_passwords').select('student_id, password'))
+      const pwById = Object.fromEntries(pw.map((p) => [p.student_id, p.password]))
+      await downloadSheet({
+        sheet: 'Portal',
+        header: ['Student ID', 'Student name', 'Grade', 'Section', 'First password'],
+        rows: list.map((s) => [s.code, s.full_name, s.grade, s.section, pwById[s.id] ?? '']),
+        filename: `portal-for-hr-${new Date().toISOString().slice(0, 10)}.xlsx`,
+      })
+      try { await supabase.rpc('log_export', { p_kind: 'hr-list' }) } catch { /* audit entry is best-effort */ }
+      const missing = list.length - pw.filter((p) => list.some((s) => s.id === p.student_id)).length
+      setMsg({ text: am ? `✓ ${list.length} ተማሪዎች። ${missing} ተማሪዎች የይለፍ ቃላቸውን ቀይረዋል (ባዶ ነው) — በ"የይለፍ ቃል ቀይር" አዲስ ይፍጠሩ።` : `✓ ${list.length} students. ${missing} have changed their password (left blank) — use Reset password for new ones.`, bad: false })
+    } catch (e) { setMsg({ text: e.message, bad: true }) }
+    setBusy(false)
+  }
+
   async function printSlips() {
     setMsg({ text: '', bad: false }); setBusy(true)
     try {
@@ -237,6 +261,9 @@ export default function StudentsTab({ ctx }) {
           <button className="btn ghost small" onClick={() => setPicked(new Set(shown.map((s) => s.id)))}>{lang === 'am' ? 'ሁሉንም ምረጥ' : 'Select all shown'}</button>
           <button className="btn ghost small" disabled={busy || !shown.length} onClick={printSlips}>
             {lang === 'am' ? `🖨 የመግቢያ ወረቀቶች (${picked.size || shown.length})` : `🖨 Print sign-in slips (${picked.size || shown.length})`}
+          </button>
+          <button className="btn ghost small" disabled={busy || !list.length} onClick={exportForHr}>
+            {lang === 'am' ? '⬇ ለ HR ላክ (Excel)' : '⬇ Export for HR'}
           </button>
           <button className="btn ghost small" disabled={busy || !shown.length} onClick={createParents}>
             {lang === 'am' ? `👪 የወላጅ መለያዎች (${picked.size || shown.length})` : `👪 Create parent logins (${picked.size || shown.length})`}

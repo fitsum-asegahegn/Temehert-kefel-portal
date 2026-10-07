@@ -10,6 +10,7 @@ export const CATEGORIES = [
   ['password', { am: 'የይለፍ ቃል', en: 'Passwords' }],
   ['parent', { am: 'ወላጆች', en: 'Parents' }],
   ['telegram', { am: 'ቴሌግራም', en: 'Telegram' }],
+  ['export', { am: 'ወደ ውጭ የተላከ', en: 'Exports' }],
   ['role', { am: 'ሚናዎች', en: 'Roles' }],
   ['subject', { am: 'ትምህርቶች', en: 'Courses' }],
   ['assignment', { am: 'የመምህር ምደባ', en: 'Teaching' }],
@@ -62,6 +63,10 @@ export function describe(row, lang = 'am') {
       return am ? `የ${d.name} የይለፍ ቃል ተቀየረ` : `Password reset for ${d.name}`
     case 'staff.create':
       return am ? `አዲስ ${d.role}: ${d.name}` : `New ${d.role} created: ${d.name}`
+    case 'export':
+      return d.kind === 'hr-list'
+        ? (am ? 'የተማሪ ዝርዝር ከመጀመሪያ የይለፍ ቃሎች ጋር ለ HR መተግበሪያ ተላከ (Excel)' : 'Student list with first passwords exported for the HR app (Excel)')
+        : (am ? 'የመረጃ ቅጂ (Backup) ወረደ' : 'Backup downloaded')
     case 'telegram.notify':
       return am ? `ውጤት በቴሌግራም ተላከ — ${g(d.grade)}፣ ${d.year} ዓ/ም ${sem(d.term)} (${d.messages} መልእክቶች)` : `Results sent on Telegram — ${g(d.grade)}, ${d.year} ${sem(d.term)} (${d.messages} messages)`
     case 'parent.create':

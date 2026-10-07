@@ -36,5 +36,6 @@ export async function downloadBackup() {
   const day = new Date().toISOString().slice(0, 10)
   XLSX.writeFile(wb, `backup-${day}.xlsx`)
   localStorage.setItem('lastBackup', day)
+  try { await supabase.rpc('log_export', { p_kind: 'backup' }) } catch { /* best-effort */ }
   return { students: students.length, marks: marks.length }
 }

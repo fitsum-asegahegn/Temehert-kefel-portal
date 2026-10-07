@@ -1032,3 +1032,18 @@ end $$;
 
 -- when results were sent on Telegram (so nobody sends them twice by accident)
 alter table public.published_results add column if not exists telegram_sent_at timestamptz;
+
+-- ===== Export audit (same as migration-011.sql) =====
+create or replace function public.log_export(p_kind text) returns void
+language plpgsql security definer set search_path = public as $$
+begin
+  if not public.is_manager() then raise exception 'Not allowed'; end if;
+  perform public.log_audit('export', jsonb_build_object('kind', left(coalesce(p_kind, ''), 40)));
+end $$;
+revoke execute on function public.log_export(text) from public, anon;
+grant execute on function public.log_export(text) to authenticated;
+
+-- ===== Keep-alive ping (same as migration-012.sql) =====
+create or replace function public.ping() returns timestamptz
+language sql stable as $$ select now() $$;
+grant execute on function public.ping() to anon, authenticated;

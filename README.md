@@ -234,5 +234,22 @@ Students tab → pick a grade (or tick some students) → **🖨 Print sign-in s
   Only people who connected themselves get it, but get the Sebsabi's agreement first.
 - Database: run `supabase/migration-010.sql` once (fresh install = `schema.sql`).
 
+## v0.25 — export for the HR (attendance) app
+- Students tab → **⬇ Export for HR**: an Excel with `Student ID | Student name | Grade | Section | First password`, for the HR app's "Import portal list".
+  The first password exists only for students who have not changed it yet (it is deleted the moment they set their own); the others are left blank —
+  use Reset password for them, then export again. The file has plain passwords: delete it after importing.
+- The export and the backup download now leave an entry in the **Audit log** (needs `supabase/migration-011.sql`; without it the export still works, just unlogged).
+- The HR-app side (import button, matching, ID-card printing) lives in the HR app's own code — see the integration notes there.
+
+## Keep Supabase from pausing (free plan)
+- Free Supabase projects pause after about a week without activity. `.github/workflows/keep-alive.yml` sends one tiny database request **every day**
+  (06:17 UTC). Test it now: GitHub → **Actions → Keep Supabase awake → Run workflow** (should show HTTP 200).
+- It needs these repo secrets (Settings → Secrets and variables → Actions): `SUPABASE_PROJECT_REF` and `SUPABASE_ANON_KEY`
+  (or `VITE_SUPABASE_URL` + `VITE_SUPABASE_ANON_KEY` if you already have them). The anon key is public by design.
+- Optional: run `supabase/migration-012.sql` (a `ping()` function that returns only the time). Without it the job falls back to a small read.
+- If the job ever turns red, GitHub emails you — the project is paused or a key changed. Unpause it in the Supabase dashboard (Restore).
+- Limits: GitHub switches scheduled jobs OFF in a public repo after 60 days with no commits (it warns by email — any push turns it back on),
+  and Supabase does not formally promise that pings count as activity. This is not a backup: keep using **Download backup** monthly.
+
 ## Not built yet
 Plan completion inside the Word/PowerPoint reports.
