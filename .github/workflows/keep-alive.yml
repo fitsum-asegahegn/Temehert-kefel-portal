@@ -1,0 +1,32 @@
+name: Keep Supabase awake
+
+# Free Supabase projects are paused after about a week with no activity.
+# This job sends one tiny request to the database every day so that never happens.
+# If it ever FAILS, GitHub emails you — that is your warning that the project is paused or the keys changed.
+on:
+  schedule:
+    - cron: '17 6 * * *'   # every day at 06:17 UTC
+  workflow_dispatch:        # lets you press "Run workflow" to test it now
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ask the database for the time
+        env:
+          SB_URL: ${{ secrets.VITE_SUPABASE_URL || format('https://{0}.supabase.co', secrets.SUPABASE_PROJECT_REF) }}
+          SB_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY || secrets.SUPABASE_ANON_KEY }}
+        run: |
+          if [ -z "$SB_KEY" ] || [ "$SB_URL" = "https://.supabase.co" ]; then
+            echo "Missing secrets: add SUPABASE_PROJECT_REF and SUPABASE_ANON_KEY (or VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY) in GitHub -> Settings -> Secrets -> Actions"
+            exit 1
+          fi
+          # 1) the ping() function (migration-012); 2) fall back to a small read if it is not installed yet
+          code=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$SB_URL/rest/v1/rpc/ping" \
+            -H "apikey: $SB_KEY" -H "Authorization: Bearer $SB_KEY" -H "Content-Type: application/json" -d '{}')
+          if [ "$code" != "200" ]; then
+            code=$(curl -s -o /dev/null -w "%{http_code}" "$SB_URL/rest/v1/settings?select=key&limit=1" \
+              -H "apikey: $SB_KEY" -H "Authorization: Bearer $SB_KEY")
+          fi
+          echo "Supabase answered HTTP $code"
+          [ "$code" = "200" ]
