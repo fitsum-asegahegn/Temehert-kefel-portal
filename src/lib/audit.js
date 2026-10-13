@@ -67,6 +67,8 @@ export function describe(row, lang = 'am') {
       return d.kind === 'hr-list'
         ? (am ? 'የተማሪ ዝርዝር ከመጀመሪያ የይለፍ ቃሎች ጋር ለ HR መተግበሪያ ተላከ (Excel)' : 'Student list with first passwords exported for the HR app (Excel)')
         : (am ? 'የመረጃ ቅጂ (Backup) ወረደ' : 'Backup downloaded')
+    case 'telegram.announce':
+      return am ? `ማስታወቂያ በቴሌግራም ተላከ: "${d.title}" (${d.chats} ሰዎች)` : `Announcement sent on Telegram: "${d.title}" (${d.chats} people)`
     case 'telegram.notify':
       return am ? `ውጤት በቴሌግራም ተላከ — ${g(d.grade)}፣ ${d.year} ዓ/ም ${sem(d.term)} (${d.messages} መልእክቶች)` : `Results sent on Telegram — ${g(d.grade)}, ${d.year} ${sem(d.term)} (${d.messages} messages)`
     case 'parent.create':

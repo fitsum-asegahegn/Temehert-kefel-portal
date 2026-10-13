@@ -251,5 +251,16 @@ Students tab → pick a grade (or tick some students) → **🖨 Print sign-in s
 - Limits: GitHub switches scheduled jobs OFF in a public repo after 60 days with no commits (it warns by email — any push turns it back on),
   and Supabase does not formally promise that pings count as activity. This is not a backup: keep using **Download backup** monthly.
 
+## v0.26 — Announcements on Telegram
+- **New announcement:** tick **📨 Also send on Telegram** before posting. Before anything is sent the app shows **how many connected people** will get it and asks you
+  to confirm. Nothing goes to Telegram unless you tick it (or press the button later).
+- **Existing announcement:** every card has **Send on Telegram** (or "Sent <date> — resend"). Resending asks first.
+- **Who gets it:** only people who connected Telegram in the app, matched to the audience: *Everyone* = students + parents + teachers; *Students*; *Teachers*;
+  *Parents*. One message per Telegram chat (a parent and child on one phone get it once). Those who blocked the bot are dropped automatically.
+- **Teachers** can now connect Telegram too (panel on their home screen). Members/admins are not recipients.
+- Message: title, event date (Ethiopian + Gregorian), the text, the author and the app link (`APP_URL`). Long texts are cut at about 3,300 characters.
+- Keep it useful: send only important notices (exam dates, holidays, results). Too many messages make people mute the bot.
+- Database: run `supabase/migration-013.sql` once (fresh install = `schema.sql`). The Edge Function redeploys on push. The audit log records each send.
+
 ## Not built yet
 Plan completion inside the Word/PowerPoint reports.

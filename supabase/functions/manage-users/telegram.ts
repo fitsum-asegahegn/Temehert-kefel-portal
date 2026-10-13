@@ -57,3 +57,29 @@ export function buildResultMessages(o: {
   }
   return { messages, students: rows.length, withoutLink }
 }
+
+// ---- announcements ----
+const ETH_MONTHS = ['መስከረም', 'ጥቅምት', 'ህዳር', 'ታህሳስ', 'ጥር', 'የካቲት', 'መጋቢት', 'ሚያዝያ', 'ግንቦት', 'ሰኔ', 'ሐምሌ', 'ነሐሴ', 'ጳጉሜን']
+// "2026-09-11" -> "1 መስከረም 2019 (2026-09-11)"
+export function ethLabel(iso: string): string {
+  const [y, m, d] = iso.split('-').map(Number)
+  const jdn = Math.floor(Date.UTC(y, m - 1, d) / 86400000) + 2440588
+  const EPOCH = 1723856
+  const r = (jdn - EPOCH) % 1461
+  const n = (r % 365) + 365 * Math.floor(r / 1460)
+  const ey = 4 * Math.floor((jdn - EPOCH) / 1461) + Math.floor(r / 365) - Math.floor(r / 1460)
+  return `${(n % 30) + 1} ${ETH_MONTHS[Math.floor(n / 30)]} ${ey} (${iso})`
+}
+
+export function buildAnnouncementText(o: { school?: string; title: string; body: string; event_date?: string | null; author?: string | null; appUrl?: string }): string {
+  const body = (o.body ?? '').length > 3300 ? o.body.slice(0, 3300) + '…' : o.body ?? ''
+  return [
+    `📢 ${o.school ?? 'ፍኖተ ጥበብ ሰንበት ትምህርት ቤት'} — ማስታወቂያ`,
+    '',
+    o.title,
+    o.event_date ? `\n📅 ${ethLabel(o.event_date)}` : '',
+    body ? `\n${body}` : '',
+    o.author ? `\n— ${o.author}` : '',
+    o.appUrl ? `\n${o.appUrl}` : '',
+  ].filter((x) => x !== '').join('\n').replace(/\n{3,}/g, '\n\n')
+}

@@ -3,7 +3,7 @@
 // Needs the service_role key, which Supabase injects here automatically — it never
 // goes into the app or config. Callers must be a member or admin.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0'
-import { buildResultMessages } from './telegram.ts'
+import { buildResultMessages, buildAnnouncementText } from './telegram.ts'
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -302,6 +302,53 @@ Deno.serve(async (req) => {
         await audit('telegram.notify', { year, term, grade, messages: built.messages.length })
       }
       return json({ total: built.messages.length, sent, blocked, failed, next, students: built.students, withoutLink: built.withoutLink })
+    }
+
+    // ---- notify_announcement: {id, skip?}  Sends one announcement to every connected person in its audience (once per chat).
+    //      Same slicing as notify_release: call again with `skip: next` until `next` is null.
+    if (body.action === 'notify_announcement') {
+      const token = Deno.env.get('TELEGRAM_BOT_TOKEN')
+      if (!token) return json({ error: 'The Telegram bot is not set up yet (TELEGRAM_BOT_TOKEN is missing).' }, 400)
+      const { data: ann } = await admin.from('announcements').select('*').eq('id', body.id).maybeSingle()
+      if (!ann) return json({ error: 'Announcement not found' }, 404)
+
+      const pageAll = async (table: string, cols: string) => { // read past the 1000-row limit
+        let out: any[] = []
+        for (let from = 0; ; from += 1000) {
+          const { data, error } = await admin.from(table).select(cols).range(from, from + 999)
+          if (error) throw new Error(error.message)
+          out = out.concat(data)
+          if (data.length < 1000) return out
+        }
+      }
+      const links = await pageAll('telegram_links', 'user_id, chat_id')
+      const roles = await pageAll('user_roles', 'user_id, role')
+      const roleOf = new Map(roles.map((r: any) => [r.user_id, r.role]))
+      const want = ann.audience === 'all' ? ['student', 'parent', 'teacher'] : ann.audience === 'students' ? ['student'] : ann.audience === 'teachers' ? ['teacher'] : ['parent']
+      const chats = [...new Set(links.filter((l: any) => want.includes(roleOf.get(l.user_id))).map((l: any) => Number(l.chat_id)))]
+
+      const { data: sch } = await admin.from('settings').select('value').eq('key', 'school_name').maybeSingle()
+      const text = buildAnnouncementText({ school: sch?.value || undefined, title: ann.title, body: ann.body, event_date: ann.event_date, author: ann.author_name, appUrl: Deno.env.get('APP_URL') || undefined })
+
+      const skip = Math.max(0, Number(body.skip ?? 0))
+      const slice = chats.slice(skip, skip + 400)
+      let sent = 0, blocked = 0, failed = 0
+      for (let i = 0; i < slice.length; i += 20) {
+        const group = slice.slice(i, i + 20)
+        const codes = await Promise.all(group.map((c) => tgSend(token, c, text).catch(() => 0)))
+        codes.forEach((c, k) => {
+          if (c === 200) sent++
+          else if (c === 403 || c === 400) { blocked++; admin.from('telegram_links').delete().eq('chat_id', group[k]).then(() => {}) }
+          else failed++
+        })
+        await sleep(800)
+      }
+      const next = skip + 400 < chats.length ? skip + 400 : null
+      if (next === null) {
+        await admin.from('announcements').update({ telegram_sent_at: new Date().toISOString() }).eq('id', ann.id)
+        await audit('telegram.announce', { title: String(ann.title).slice(0, 60), audience: ann.audience, chats: chats.length })
+      }
+      return json({ total: chats.length, sent, blocked, failed, next })
     }
 
     // ---- delete_users: {user_ids: []}  ADMIN ONLY. Removes the account and everything tied to it

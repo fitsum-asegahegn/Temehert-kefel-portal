@@ -51,8 +51,8 @@ export default function TelegramConnect({ ctx }) {
       {open && (
         <div style={{ marginTop: '.75rem' }}>
           <p className="muted">
-            {am ? 'ውጤት ሲለቀቅ አማካይዎን፣ ደረጃዎን እና የትምህርት ውጤቶችን በቴሌግራም መልእክት ያገኛሉ። ያገናኙት ቴሌግራም ብቻ መልእክቱን ያገኛል።'
-              : 'When results are released you get a Telegram message with the average, rank and course marks. Only the Telegram you connect receives it.'}
+            {am ? 'ውጤት ሲለቀቅና አስፈላጊ ማስታወቂያዎች ሲወጡ በቴሌግራም መልእክት ያገኛሉ። ያገናኙት ቴሌግራም ብቻ መልእክቱን ያገኛል።'
+              : 'When results are released and important announcements are posted you get a Telegram message. Only the Telegram you connect receives it.'}
           </p>
           <div className="row" style={{ marginBottom: 0 }}>
             <button className="btn" disabled={busy} onClick={connect}>{connected ? (am ? 'ሌላ ቴሌግራም አገናኝ' : 'Connect another Telegram') : (am ? 'ከቴሌግራም ጋር አገናኝ' : 'Connect Telegram')}</button>
