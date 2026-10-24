@@ -1062,3 +1062,9 @@ begin
   insert into telegram_link_codes (code, user_id, expires_at) values (c, auth.uid(), now() + interval '15 minutes');
   return c;
 end $$;
+
+-- ===== Permanent student IDs (same as migration-014.sql) =====
+alter table public.students alter column seq drop not null;   -- permanent IDs do not use the old counter
+alter table public.students add column if not exists cohort int check (cohort between 1990 and 2100);
+alter table public.students add column if not exists serial int check (serial between 1 and 9999);
+create unique index if not exists students_cohort_serial_uidx on public.students (cohort, serial) where cohort is not null;

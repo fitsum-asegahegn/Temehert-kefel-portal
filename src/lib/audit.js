@@ -51,6 +51,8 @@ export function describe(row, lang = 'am') {
       const keys = Object.keys(d.changes || {}).map((k) => FIELD[k]?.[lang] ?? k).join(am ? '፣ ' : ', ')
       return am ? `የ${d.name} (${d.code}) መረጃ ተስተካከለ: ${keys}` : `Details of ${d.name} (${d.code}) edited: ${keys}`
     }
+    case 'student.permanent_id':
+      return am ? `${d.count} ተማሪዎች ቋሚ መታወቂያ አገኙ` : `${d.count} students received permanent IDs`
     case 'student.create':
       return am ? `${d.count} አዳዲስ ተማሪዎች ተፈጠሩ${d.grades?.length ? ` — ${d.grades.map(g).join('፣ ')}` : ''}` : `${d.count} new students created${d.grades?.length ? ` — ${d.grades.map(g).join(', ')}` : ''}`
     case 'student.promote':

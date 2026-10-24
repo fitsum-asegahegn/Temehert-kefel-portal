@@ -9,12 +9,17 @@ Vite + React + Supabase. Four roles, all enforced by Postgres RLS (`supabase/sch
 | member | Students, teachers, subjects, assignments, approve marks, conduct, report cards (all / one grade / selected) |
 | admin | Everything a member does + users & roles, settings, school summary report |
 
-## Student ID
-`FTS/27/####` — 27 is constant. First character of the last four = grade:
-`0`=3 … `4`=ቀዳማይ(7) … `9`=ሳድሳይ(12); grade 1 = `A`, grade 2 = `B` (e.g. `FTS/27/A042`).
-The last 3 digits are the student's lifelong number. On promotion the first character
-changes (new ID, same password, marks history kept). Students sign in with the ID;
-behind the scenes it maps to `fts-27-0142@<STUDENT_DOMAIN>` (no email is ever sent).
+## Student ID (v0.27 — permanent IDs)
+- **ቀዳማይ to ሳድሳይ (grades 7–12): `FTS/<4 digits>/<YY>` — permanent.** `YY` = the last two digits of the Ethiopian year the student **joined ቀዳማይ**
+  (ቀዳማይ in 2019 → `/19`; next year's group → `/20`). The 4 digits count 0001, 0002 … inside each year group. So a ሀምሳይ student in 2019 (joined 2015)
+  is `FTS/0007/15`, and the same ID is still theirs in ሳድሳይ and for life: nothing in it changes at promotion.
+- **Grades 1–6: temporary `FTS/27/####`** (first character = grade: `A`=1, `B`=2, `0`=3 … `3`=6). It changes at each promotion, as before, until the student is
+  promoted into ቀዳማይ — at that moment they receive their permanent ID from the year they join (the promotion screen asks for that year, default = next school year).
+- **Students already in grades 7–12 (created before this change):** Students tab → **🆔 Assign permanent IDs** (shown while any exist). Year group = school year − (grade − 7),
+  e.g. in 2019 ቀዳማይ → /19, ካልዓይ → /18 … ሳድሳይ → /14. Their ID changes ONE last time, passwords stay; print the new list and re-export for the HR app.
+- New students created directly in grade 7–12 get a permanent ID by the same rule.
+- Sign-in accepts either kind, typed loosely (`fts/0142/19`, `FTS-0142-19`, `fts 27 a042` …); behind the scenes it maps to `fts-0142-19@<STUDENT_DOMAIN>`.
+- Database: run `supabase/migration-014.sql` once (fresh install = `schema.sql`); the Edge Function redeploys on push.
 
 ## Setup
 1. Create a Supabase project. **Authentication → Providers → Email**: keep on, and turn

@@ -1,5 +1,5 @@
 // Fill the teacher's marks grid from an Excel/CSV sheet.
-// Columns: a student column (ID like FTS/27/0142, or the full name) + one column per assessment, headed with the
+// Columns: a student column (ID like FTS/0142/19, or the full name) + one column per assessment, headed with the
 // assessment's name (a trailing "(30)" is ignored, so the roster download can be re-imported).
 
 const norm = (v) => String(v ?? '').toLowerCase().replace(/\s+/g, ' ').trim()

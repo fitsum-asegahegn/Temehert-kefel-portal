@@ -4,6 +4,7 @@
 // goes into the app or config. Callers must be a member or admin.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0'
 import { buildResultMessages, buildAnnouncementText } from './telegram.ts'
+import { oldCode, permanentCode, cohortFor, emailFor } from './ids.ts'
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -12,14 +13,8 @@ const CORS = {
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...CORS, 'Content-Type': 'application/json' } })
 
-const SCHOOL = 'FTS'
-const BATCH = '27'
 const DOMAIN = Deno.env.get('STUDENT_DOMAIN') ?? 'students.fts-portal.app'
-
-// Grades 3..12 -> digits 0..9. Grades 1 and 2 -> letters A and B.
-const prefix = (g: number) => (g === 1 ? 'A' : g === 2 ? 'B' : String(g - 3))
-const codeOf = (g: number, seq: number) => `${SCHOOL}/${BATCH}/${prefix(g)}${String(seq).padStart(3, '0')}`
-const emailOf = (code: string) => code.toLowerCase().replaceAll('/', '-') + '@' + DOMAIN
+const emailOf = (code: string) => emailFor(code, DOMAIN)
 
 // Students use a 4-digit PIN. Supabase won't accept passwords shorter than 6, so a fixed ending is added behind the
 // scenes (the app does the same when a student signs in). Keep it identical to PIN_PAD in the web app.
@@ -88,11 +83,27 @@ Deno.serve(async (req) => {
       try { await admin.from('audit_log').insert({ actor: user.id, actor_name: callerProfile?.full_name ?? null, action, details }) } catch { /* never block the action */ }
     }
 
+    // Permanent IDs (grades 7-12): FTS/<serial>/<cohort YY>. The serial counts up inside each cohort.
+    const { data: yrRow } = await admin.from('settings').select('value').eq('key', 'current_year').maybeSingle()
+    const schoolYear = Number(yrRow?.value) || 2019
+    const lastSerial = new Map<number, number>()
+    const nextSerial = async (cohort: number) => {
+      if (!lastSerial.has(cohort)) {
+        const { data } = await admin.from('students').select('serial').eq('cohort', cohort).not('serial', 'is', null).order('serial', { ascending: false }).limit(1)
+        lastSerial.set(cohort, data?.[0]?.serial ?? 0)
+      }
+      const n = lastSerial.get(cohort)! + 1
+      lastSerial.set(cohort, n)
+      return n
+    }
+    const giveBack = (cohort: number) => lastSerial.set(cohort, (lastSerial.get(cohort) ?? 1) - 1)
+
     // ---- create_students: [{full_name, grade, section?, gender?, guardian_name?, guardian_phone?}]
     if (body.action === 'create_students') {
       const list = body.students as any[]
       if (!Array.isArray(list) || !list.length) return json({ error: 'No students given' }, 400)
-      const { data: mx } = await admin.from('students').select('seq').order('seq', { ascending: false }).limit(1)
+      // temporary IDs (grades 1-6) count up by `seq`; NULLs must be ignored or the counter restarts at 0
+      const { data: mx } = await admin.from('students').select('seq').not('seq', 'is', null).order('seq', { ascending: false }).limit(1)
       let seq = mx?.[0]?.seq ?? 0
       const created: any[] = []
       const errors: any[] = []
@@ -100,20 +111,29 @@ Deno.serve(async (req) => {
         const name = String(s.full_name ?? '').trim()
         const grade = Number(s.grade)
         if (!name || !(grade >= 1 && grade <= 12)) { errors.push({ full_name: name, error: 'Invalid name or grade' }); continue }
-        if (seq >= 999) { errors.push({ full_name: name, error: 'All 999 ID numbers are used' }); continue }
-        seq++
-        const code = codeOf(grade, seq)
+        let code: string, mySeq: number | null = null, cohort: number | null = null, serial: number | null = null
+        if (grade >= 7) {
+          cohort = cohortFor(grade, schoolYear)
+          serial = await nextSerial(cohort)
+          if (serial > 9999) { giveBack(cohort); errors.push({ full_name: name, error: 'All 9999 ID numbers of this year group are used' }); continue }
+          code = permanentCode(cohort, serial)
+        } else {
+          if (seq >= 999) { errors.push({ full_name: name, error: 'All 999 temporary ID numbers are used' }); continue }
+          seq++; mySeq = seq
+          code = oldCode(grade, seq)
+        }
+        const undo = () => { if (cohort != null) giveBack(cohort); else seq-- }
         const pin = genPin()
         const { data: u, error: ue } = await admin.auth.admin.createUser({
           email: emailOf(code), password: pin + PIN_PAD, email_confirm: true, user_metadata: { full_name: name },
         })
-        if (ue || !u?.user) { seq--; errors.push({ full_name: name, error: ue?.message ?? 'Could not create account' }); continue }
+        if (ue || !u?.user) { undo(); errors.push({ full_name: name, error: ue?.message ?? 'Could not create account' }); continue }
         const id = u.user.id
         let fail = (await admin.from('user_roles').upsert({ user_id: id, role: 'student' })).error
         if (!fail) fail = (await admin.from('profiles').upsert({ id, full_name: name, must_change_password: true })).error
         if (!fail) {
           fail = (await admin.from('students').insert({
-            id, seq, code, full_name: name, grade,
+            id, seq: mySeq, cohort, serial, code, full_name: name, grade,
             section: s.section || 'A', gender: s.gender ?? null,
             guardian_name: s.guardian_name ?? null, guardian_phone: s.guardian_phone ?? null,
             christian_name: s.christian_name ?? null, parish: s.parish ?? null,
@@ -122,7 +142,7 @@ Deno.serve(async (req) => {
         }
         if (fail) {
           await admin.auth.admin.deleteUser(id)
-          seq--
+          undo()
           errors.push({ full_name: name, error: fail.message })
           continue
         }
@@ -174,12 +194,12 @@ Deno.serve(async (req) => {
 
     // ---- promote: moves [{id, grade}]  (grade 13 = graduate: account deactivated, ID unchanged)
     if (body.action === 'promote') {
-      const moves = body.moves as { id: string; grade: number }[]
+      const moves = body.moves as { id: string; grade: number; cohort?: number }[]
       if (!Array.isArray(moves) || !moves.length) return json({ error: 'No students given' }, 400)
       const results: any[] = []
       const errors: any[] = []
       for (const m of moves) {
-        const { data: st } = await admin.from('students').select('id, seq, code, full_name').eq('id', m.id).maybeSingle()
+        const { data: st } = await admin.from('students').select('id, seq, code, full_name, grade, cohort, serial').eq('id', m.id).maybeSingle()
         if (!st) { errors.push({ id: m.id, error: 'Student not found' }); continue }
         if (m.grade > 12) {
           await admin.from('students').update({ active: false }).eq('id', st.id)
@@ -187,12 +207,27 @@ Deno.serve(async (req) => {
           continue
         }
         if (!(m.grade >= 1)) { errors.push({ id: m.id, full_name: st.full_name, error: 'Invalid grade' }); continue }
-        const newCode = codeOf(m.grade, st.seq)
+        let newCode = st.code
+        const patch: Record<string, unknown> = { grade: m.grade }
+        if (st.cohort) {
+          // permanent ID: never changes, only the grade moves
+        } else if (m.grade >= 7) {
+          // joining ቀዳማይ: the year of joining becomes the permanent ID (the client sends it; normally the next school year)
+          const cohort = m.grade === 7 ? Number(m.cohort) : cohortFor(m.grade, schoolYear)
+          if (!(cohort >= 1990 && cohort <= 2100)) { errors.push({ id: st.id, full_name: st.full_name, error: 'The joining year is missing' }); continue }
+          const serial = await nextSerial(cohort)
+          if (serial > 9999) { giveBack(cohort); errors.push({ id: st.id, full_name: st.full_name, error: 'All ID numbers of this year group are used' }); continue }
+          newCode = permanentCode(cohort, serial)
+          Object.assign(patch, { code: newCode, cohort, serial })
+        } else {
+          newCode = oldCode(m.grade, st.seq)
+          patch.code = newCode
+        }
         if (newCode !== st.code) {
           const { error: ae } = await admin.auth.admin.updateUserById(st.id, { email: emailOf(newCode), email_confirm: true })
           if (ae) { errors.push({ id: st.id, full_name: st.full_name, error: ae.message }); continue }
         }
-        const { error: se } = await admin.from('students').update({ grade: m.grade, code: newCode }).eq('id', st.id)
+        const { error: se } = await admin.from('students').update(patch).eq('id', st.id)
         if (se) { errors.push({ id: st.id, full_name: st.full_name, error: se.message }); continue }
         results.push({ id: st.id, full_name: st.full_name, old_code: st.code, new_code: newCode, graduated: false })
       }
@@ -203,6 +238,31 @@ Deno.serve(async (req) => {
         if (grads.length) await audit('student.promote', { count: grads.length, graduated: true })
       }
       return json({ results, errors })
+    }
+
+    // ---- assign_permanent_ids: {limit?}  Gives a permanent ID to every active student already in grades 7-12 who still has a
+    //      temporary one. cohort = school year - (grade - 7), e.g. a ሀምሳይ (11) student in 2019 joined in 2015 -> FTS/0001/15.
+    //      Works in small slices; the app calls it again until `remaining` is 0.
+    if (body.action === 'assign_permanent_ids') {
+      const limit = Math.min(Math.max(Number(body.limit ?? 25), 1), 50)
+      const { data: rows } = await admin.from('students').select('id, code, full_name, grade').is('cohort', null).gte('grade', 7).eq('active', true)
+        .order('seq', { ascending: true, nullsFirst: false }).order('full_name').limit(limit)
+      const results: any[] = []
+      const errors: any[] = []
+      for (const st of rows ?? []) {
+        const cohort = cohortFor(st.grade, schoolYear)
+        const serial = await nextSerial(cohort)
+        if (serial > 9999) { giveBack(cohort); errors.push({ id: st.id, full_name: st.full_name, error: 'All ID numbers of this year group are used' }); continue }
+        const newCode = permanentCode(cohort, serial)
+        const { error: ae } = await admin.auth.admin.updateUserById(st.id, { email: emailOf(newCode), email_confirm: true })
+        if (ae) { giveBack(cohort); errors.push({ id: st.id, full_name: st.full_name, error: ae.message }); continue }
+        const { error: se } = await admin.from('students').update({ code: newCode, cohort, serial }).eq('id', st.id)
+        if (se) { giveBack(cohort); errors.push({ id: st.id, full_name: st.full_name, error: se.message }); continue }
+        results.push({ id: st.id, full_name: st.full_name, old_code: st.code, new_code: newCode, grade: st.grade })
+      }
+      const { count } = await admin.from('students').select('*', { count: 'exact', head: true }).is('cohort', null).gte('grade', 7).eq('active', true)
+      if (results.length) await audit('student.permanent_id', { count: results.length })
+      return json({ results, errors, remaining: count ?? 0 })
     }
 
     // ---- create_parents: {student_ids: [], phone?}  Creates (or reuses) a parent login from each student's guardian phone

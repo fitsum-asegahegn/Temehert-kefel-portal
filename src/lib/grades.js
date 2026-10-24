@@ -39,22 +39,34 @@ export function normalizePhone(input) {
 export const parentEmail = (nine) => `p${nine}@${PARENT_DOMAIN}`
 export const phoneFromEmail = (email) => { const m = /^p(\d{9})@/.exec(email || ''); return m ? '0' + m[1] : '' }
 
+// ---- Student IDs ----
+// Grades 1-6   : temporary ID  FTS/27/<A|B|0-3><3 digits>  (changes at each promotion until the student reaches ቀዳማይ)
+// Grades 7-12  : PERMANENT ID  FTS/<4 digits>/<YY>  where YY = last two digits of the Ethiopian year the student joined ቀዳማይ
+//                (ቀዳማይ in 2019 -> /19, next year's group -> /20 ...). It never changes again.
 export const SCHOOL = 'FTS'
 export const BATCH = '27'
 export const prefixFor = (g) => (g === 1 ? 'A' : g === 2 ? 'B' : String(g - 3))
 export const codeFor = (g, seq) => `${SCHOOL}/${BATCH}/${prefixFor(g)}${String(seq).padStart(3, '0')}`
+export const permanentCode = (cohort, serial) => `${SCHOOL}/${String(serial).padStart(4, '0')}/${String(cohort % 100).padStart(2, '0')}`
+// the year a student in `grade` joined ቀዳማይ, during school year `schoolYear`
+export const cohortFor = (grade, schoolYear) => schoolYear - (grade - 7)
 export const emailForCode = (code) => code.toLowerCase().replaceAll('/', '-') + '@' + STUDENT_DOMAIN
 
+// grade of a TEMPORARY id only (permanent ids do not say the grade)
 export function gradeFromCode(code) {
-  const c = code.split('/')[2]?.[0]
+  const parts = code.split('/')
+  if (parts[1] !== BATCH) return null
+  const c = parts[2]?.[0]
   if (c === 'A') return 1
   if (c === 'B') return 2
   return c >= '0' && c <= '9' ? Number(c) + 3 : null
 }
 
-// Accepts "fts/27/0142", "FTS-27-0142", "fts 27 0142" ... returns canonical code or null.
+// Accepts either kind, typed loosely ("fts/0142/19", "FTS-0142-19", "fts 27 a042"...). Returns the canonical code or null.
 export function normalizeCode(input) {
-  const m = String(input).toUpperCase().trim()
-    .match(/^FTS[\s/\-]*27[\s/\-]*([AB]\d{3}|\d{4})$/)
-  return m ? `${SCHOOL}/${BATCH}/${m[1]}` : null
+  const s = String(input).toUpperCase().trim()
+  const perm = s.match(/^FTS[\s/\-]+(\d{4})[\s/\-]+(\d{2})$/)
+  if (perm) return `${SCHOOL}/${perm[1]}/${perm[2]}`
+  const old = s.match(/^FTS[\s/\-]*27[\s/\-]*([AB]\d{3}|\d{4})$/)
+  return old ? `${SCHOOL}/${BATCH}/${old[1]}` : null
 }

@@ -15,6 +15,8 @@ export default function PromoteTab({ ctx }) {
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState({ text: '', bad: false })
   const [slips, setSlips] = useState(null)
+  const [cohort, setCohort] = useState(ctx.year + 1) // year the 6th-graders join ቀዳማይ -> end of their permanent ID
+  useEffect(() => { setCohort(year + 1) }, [year])
 
   async function load() {
     setRows(null); setMsg({ text: '', bad: false })
@@ -36,15 +38,18 @@ export default function PromoteTab({ ctx }) {
   async function apply() {
     const chosen = rows.filter((r) => r.promote)
     if (!chosen.length) return
+    if (grade === 6 && !(cohort >= 1990 && cohort <= 2100)) { setMsg({ text: am ? 'ትክክለኛ ዓመት ያስገቡ።' : 'Enter a valid year.', bad: true }); return }
     const ask = graduating
       ? (am ? `${chosen.length} ተማሪዎች ይመረቃሉ (መለያቸው ይዘጋል)። ይቀጥሉ?` : `Graduate ${chosen.length} students? Their accounts will be closed.`)
-      : (am ? `${chosen.length} ተማሪዎች ወደ ${gradeLabel(grade + 1, lang)} ይሸጋገራሉ። መታወቂያቸው ይቀየራል (የይለፍ ቃሉ አይቀየርም)። ይቀጥሉ?` : `Promote ${chosen.length} students to ${gradeLabel(grade + 1, lang)}? Their IDs change (passwords stay).`)
+      : grade === 6
+        ? (am ? `${chosen.length} ተማሪዎች ወደ ቀዳማይ ይገባሉ። ቋሚ መታወቂያ ያገኛሉ (FTS/####/${String(cohort % 100).padStart(2, '0')}) — ከዚህ በኋላ አይቀየርም። ይቀጥሉ?` : `Promote ${chosen.length} students into ቀዳማይ? They get their PERMANENT ID (FTS/####/${String(cohort % 100).padStart(2, '0')}) — it never changes again. Continue?`)
+        : (am ? `${chosen.length} ተማሪዎች ወደ ${gradeLabel(grade + 1, lang)} ይሸጋገራሉ። (ጊዜያዊ መታወቂያ ይቀየራል፤ ቋሚ አይቀየርም።) ይቀጥሉ?` : `Promote ${chosen.length} students to ${gradeLabel(grade + 1, lang)}? (Temporary IDs change; permanent IDs stay.)`)
     if (!window.confirm(ask)) return
     setBusy(true); setMsg({ text: '', bad: false })
     try {
       const done = [], errors = []
       for (let i = 0; i < chosen.length; i += 25) { // small batches keep each request short
-        const r = await manage('promote', { moves: chosen.slice(i, i + 25).map((s) => ({ id: s.id, grade: grade + 1 })) })
+        const r = await manage('promote', { moves: chosen.slice(i, i + 25).map((s) => ({ id: s.id, grade: grade + 1, ...(grade === 6 ? { cohort } : {}) })) })
         done.push(...r.results); errors.push(...r.errors)
       }
       if (errors.length) setMsg({ text: errors.map((x) => `${x.full_name ?? x.id}: ${x.error}`).join(' | '), bad: true })
@@ -86,6 +91,11 @@ export default function PromoteTab({ ctx }) {
         <label>{t('grade')}
           <select value={grade} onChange={(e) => setGrade(Number(e.target.value))}>{GRADES.map((g) => <option key={g} value={g}>{gradeLabel(g, lang)}</option>)}</select>
         </label>
+        {grade === 6 && (
+          <label>{am ? 'ቀዳማይ የሚገቡበት ዓመት' : 'Year they join ቀዳማይ'}
+            <input type="number" value={cohort} onChange={(e) => setCohort(Number(e.target.value))} style={{ width: '6rem' }} />
+          </label>
+        )}
         <button className="btn ghost small" disabled={!rows} onClick={() => setRows(rows.map((r) => ({ ...r, promote: r.status === 'promoted' })))}>{am ? 'ያለፉትን ምረጥ' : 'Select passed'}</button>
         <button className="btn ghost small" disabled={!rows} onClick={() => setRows(rows.map((r) => ({ ...r, promote: false })))}>{am ? 'ምርጫ አጽዳ' : 'Select none'}</button>
         <button className="btn" disabled={busy || !count} onClick={apply}>

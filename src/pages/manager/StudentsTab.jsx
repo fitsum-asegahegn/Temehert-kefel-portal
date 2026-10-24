@@ -186,16 +186,51 @@ export default function StudentsTab({ ctx }) {
     } catch (e) { setMsg({ text: e.message, bad: true }) }
   }
 
+  // One-time: students already in ቀዳማይ-ሳድሳይ get their permanent ID (FTS/####/YY, YY = the year they joined ቀዳማይ).
+  const needIds = list.filter((s) => s.grade >= 7 && !s.cohort).length
+  async function assignPermanent() {
+    const am = lang === 'am'
+    if (!window.confirm(am
+      ? `${needIds} የቀዳማይ-ሳድሳይ ተማሪዎች ቋሚ መታወቂያ (FTS/####/YY) ያገኛሉ። YY = ቀዳማይ የገቡበት ዓመት። መታወቂያቸው አንድ ጊዜ ብቻ ይቀየራል፤ የይለፍ ቃላቸው አይቀየርም። አዲሱን ዝርዝር ማተም ያስፈልጋል። ይቀጥሉ?`
+      : `${needIds} students in ቀዳማይ–ሳድሳይ will get a permanent ID (FTS/####/YY, YY = the year they joined ቀዳማይ). Their ID changes ONE last time; passwords stay the same. You will need to print the new list. Continue?`)) return
+    setBusy(true); setMsg({ text: '', bad: false })
+    try {
+      const all = [], errs = []
+      for (let round = 0; round < 40; round++) { // 25 at a time keeps each request short
+        const r = await manage('assign_permanent_ids', { limit: 25 })
+        all.push(...r.results); errs.push(...r.errors)
+        if (!r.remaining || !r.results.length) break
+      }
+      if (errs.length) setMsg({ text: errs.map((x) => `${x.full_name ?? x.id}: ${x.error}`).join(' | '), bad: true })
+      if (all.length) setSlips({
+        items: all.map((x) => ({ full_name: x.full_name, code: x.new_code, grade: x.grade })),
+        title: am ? 'ቋሚ መታወቂያዎች' : 'Permanent IDs',
+        note: am ? 'የይለፍ ቃል አልተቀየረም — አዲሱን መታወቂያ ብቻ ይስጡ። ይህ መታወቂያ ከዚህ በኋላ አይቀየርም።' : 'Passwords are unchanged — hand out the new ID only. This ID never changes again.',
+      })
+      load()
+    } catch (e) { setMsg({ text: e.message, bad: true }) }
+    setBusy(false)
+  }
+
   async function promote() {
     const ids = shown.filter((s) => picked.has(s.id))
     if (!ids.length) return
+    // students moving up into ቀዳማይ get their PERMANENT ID from the year they join it
+    let cohort
+    if (ids.some((s) => s.grade + 1 === 7)) {
+      const v = window.prompt(lang === 'am'
+        ? 'ቀዳማይ የሚገቡበት ዓመት (ዓ/ም)። የቋሚ መታወቂያው መጨረሻ (ለምሳሌ 2020 → /20) ይሆናል።'
+        : 'Year they join ቀዳማይ (Ethiopian year). It becomes the end of their permanent ID (for example 2020 → /20).', String(ctx.year + 1))
+      cohort = Number(v)
+      if (!(cohort >= 1990 && cohort <= 2100)) return
+    }
     const msgTxt = lang === 'am'
-      ? `${ids.length} ተማሪዎች ወደ ቀጣይ ክፍል ይሸጋገሩ? መታወቂያቸው ይቀየራል።`
-      : `Promote ${ids.length} students to the next grade? Their IDs will change.`
+      ? `${ids.length} ተማሪዎች ወደ ቀጣይ ክፍል ይሸጋገሩ? (ጊዜያዊ መታወቂያ ይቀየራል፤ ቋሚ መታወቂያ አይቀየርም።)`
+      : `Promote ${ids.length} students to the next grade? (Temporary IDs change; permanent IDs stay.)`
     if (!window.confirm(msgTxt)) return
     setBusy(true)
     try {
-      const r = await manage('promote', { moves: ids.map((s) => ({ id: s.id, grade: s.grade + 1 })) })
+      const r = await manage('promote', { moves: ids.map((s) => ({ id: s.id, grade: s.grade + 1, ...(s.grade + 1 === 7 ? { cohort } : {}) })) })
       if (r.errors.length) setMsg({ text: r.errors.map((x) => `${x.full_name ?? x.id}: ${x.error}`).join(' | '), bad: true })
       const byId = Object.fromEntries(ids.map((s) => [s.id, s]))
       setSlips({
@@ -262,6 +297,11 @@ export default function StudentsTab({ ctx }) {
           <button className="btn ghost small" disabled={busy || !shown.length} onClick={printSlips}>
             {lang === 'am' ? `🖨 የመግቢያ ወረቀቶች (${picked.size || shown.length})` : `🖨 Print sign-in slips (${picked.size || shown.length})`}
           </button>
+          {needIds > 0 && (
+            <button className="btn small" disabled={busy} onClick={assignPermanent}>
+              {lang === 'am' ? `🆔 ቋሚ መታወቂያ ስጥ (${needIds})` : `🆔 Assign permanent IDs (${needIds})`}
+            </button>
+          )}
           <button className="btn ghost small" disabled={busy || !list.length} onClick={exportForHr}>
             {lang === 'am' ? '⬇ ለ HR ላክ (Excel)' : '⬇ Export for HR'}
           </button>
